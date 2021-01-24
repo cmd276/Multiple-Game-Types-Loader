@@ -222,7 +222,6 @@ function getObjectType(%objName)
 }
 
 // These two functions were stolen from the internet, and adapted to fit starsiege.
-
 function positionX(%numItems, %thisNum, %radius)
 {
     %alpha = 360/%numItems; // angle between the elements
@@ -238,7 +237,6 @@ function positionY(%numItems, %thisNum, %radius)
     %y = %radius * sin(%angle); // Y coordinates
     return %y;
 }
-
 
 // Modified to allow on the fly changes. left blank, will use the above settings.
 function wilzuun::loadVehicle(%name, %hercs, %tanks, %ter, %kni, %pir, %reb, %cyb, %met, %spe, %dis, %art) 

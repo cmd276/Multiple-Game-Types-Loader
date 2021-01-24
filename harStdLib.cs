@@ -1,3 +1,4 @@
+## -------------------------------------------------------------------- Header
 // Ore Harvesting Standard Library
 // ][)ull (dull@ss-harvester.com)
 // Large portions and original idea by Orogogus
@@ -6,6 +7,7 @@
 // Status/Info at http://www.geocities.com/imverydull/Harvester.html or http://www.ss-harvester.com
 // 
 // ver 1.000 -- 2-23-1
+## -------------------------------------------------------------------- IMPORTANT NOTES
 //================================================
 // ***Server Host Info***
 //
@@ -55,34 +57,56 @@
 //
 //================================================
 // Edited for inclusion into Scripting library by Wilzuun.
+
+## -------------------------------------------------------------------- Version History
+// Ver 1 acquired from internet.
+//  2.0
+//      - Organized code into categories.
+//      - Added inMissionStart and inMissionEnd functions.
+
+
+## -------------------------------------------------------------------- Settings
 $HarvStdLibVer="StdLib 1.000";
 $server::TeamDamage = true;
 
-function InstantMoney(%value)     // Debugging, to be removed before finalization
-{
-    if(!%value) 
-        %value = 100;
-    $Ore[*IDSTR_TEAM_RED] = $Ore[*IDSTR_TEAM_RED] + %value;
-    $Unallocated[*IDSTR_TEAM_RED] = $Unallocated[*IDSTR_TEAM_RED] + %value;
-    $Ore[*IDSTR_TEAM_BLUE] = $Ore[*IDSTR_TEAM_BLUE] + %value;
-    $Unallocated[*IDSTR_TEAM_BLUE] = $Unallocated[*IDSTR_TEAM_BLUE] + %value;
-}
+$Capacity["Knight's Apocalypse"] = 50;
+$Capacity["Basilisk"] = 35;
+$Capacity["Knight's Basilisk"] = 35;
+$Capacity["Emancipator"] = 25;
+$Capacity["Gorgon"] = 45;
+$Capacity["Knight's Gorgon"] = 45;
+$Capacity["Minotaur"] = 30;
+$Capacity["Knight's Minotaur"] = 30;
+$Capacity["Olympian"] = 50;
+$Capacity["Talon"] = 20;
+$Capacity["Knight's Talon"] = 20;
+$Capacity["Adjudicator"] = 40;
+$Capacity["Platinum Guard Adjudicator"] = 40;
+$Capacity["Executioner"] = 55;
+$Capacity["Platinum Guard Executioner"] = 55;
+$Capacity["Goad"] = 20;
+$Capacity["Shepherd"] = 30;
+$Capacity["Seeker"] = 20;
+$Capacity["Metagen Goad"] = 20;
+$Capacity["Metagen Seeker"] = 20;
+$Capacity["Metagen Shepherd"] = 30;
+$Capacity["Avenger"] = 30;
+$Capacity["Disrupter"] = 30;
+$Capacity["Knight's Disrupter"] = 30;
+$Capacity["Dreadlock"] = 30;
+$Capacity["Harabec's Predator"] = 30;
+$Capacity["Myrmidon"] = 30;
+$Capacity["Knight's Myrmidon"] = 30;
+$Capacity["Paladin"] = 30;
+$Capacity["Knight's Paladin"] = 30;
+$Capacity["Bolo"] = 30;
+$Capacity["Recluse"] = 30;
 
-function Har::setDefaultMissionOptions()
-{
-    $server::TeamPlay = true;
-    $server::AllowDeathmatch = false;
-    $server::AllowTeamPlay = true;    
-    $server::AllowTeamRed = true;
-    $server::AllowTeamBlue = true;
-    $server::AllowTeamYellow = false;
-    $server::AllowTeamPurple = false;
-    $server::disableTeamRed = false;
-    $server::disableTeamBlue = false;
-    $server::disableTeamYellow = true;
-    $server::disableTeamPurple = true;
-}
+$MapVersion = "ver1.000 - 2-23-1"; // This, $MapBy, and $AdditionalRules should be defined before executing the StdLib
+$MapBy = "<F4>Harv_Desolate by dull@ss-harvester.com"; // Map-Maker can put any contact info or whatever here
+$AdditionalRules = ""; // Put any other stuff you want added to the rules here... limited space...
 
+## -------------------------------------------------------------------- onMission
 function Har::onMissionStart()
 {
     if($BootTKers != true) 
@@ -178,6 +202,46 @@ function Har::onMissionStart()
     HarvOnMissionStart();
 }
 
+function Har::onMissionLoad()         // ==========Rules to be updated (and spell checked) once more scripting is done==========
+{
+    if($HarvLog == true)
+    {
+        %time = getTime();
+        %date = getDate();
+        fileWrite("HarvestPlayersLog.cs", append, "Starting Mission: " @ $missionName @" -- " @ %time @ " " @%date@".");
+    }
+    cdAudioCycle("Purge", "Newtech", "Cyberntx"); 
+
+    HarvOnMissionLoad();
+}
+
+function Har::onMissionEnd()
+{
+    deleteObject("MissionGroup\\remove");
+    flushConsoleScheduler();
+    notifyMissionEnd();
+}
+
+## -------------------------------------------------------------------- inMission
+
+function Har::inMissionStart() 
+{
+    Har::onMissionLoad();
+    Har::onMissionStart();
+    // set the allowed items.
+    Har::setAllowedItems();
+    // set the rules.
+    Har::setrules();
+    // set mission name to reflect new game type.
+    $missionName = "HARV - Dynamic Games";
+    // announce new game type.
+    say(0,0,"HARVESTER now in effect!");
+}
+
+function Har::inMissionEnd() {}
+
+
+## -------------------------------------------------------------------- Player
 function Har::player::onAdd(%player)
 {
     say(%player, 35, "<F4>Send Harvester comments to dull@ss-harvester.com");
@@ -216,51 +280,40 @@ function Har::player::onRemove(%player)
     }
     HarvPlayerOnRemove(%player);
 }
-
-function Har::onMissionLoad()         // ==========Rules to be updated (and spell checked) once more scripting is done==========
+## -------------------------------------------------------------------- Vehicle
+function Har::vehicle::onMessage(%a, %b, %c, %d, %e, %f, %g, %h)
 {
-    if($HarvLog == true)
+    if(%b == "TargetDestroyed")
     {
-        %time = getTime();
-        %date = getDate();
-        fileWrite("HarvestPlayersLog.cs", append, "Starting Mission: " @ $missionName @" -- " @ %time @ " " @%date@".");
+        if($isType[%c] == "Turret")
+        {
+            if(getTeam(%c) != getTeam(%a))
+            {
+                if(%c.sent != true)
+                {
+                    %c.sent = true;
+                    turret::onDestroyed(%c, %a);
+                    HarvTurretOnDestroyed(%c, %a);
+                }
+            }
+        }
     }
-    cdAudioCycle("Purge", "Newtech", "Cyberntx"); 
-    %rules = "<F2>GAMETYPE:\n" @ 
-        "<F0>Harvester \n\n" @
-        "<tIDMULT_TDM_MAPNAME>"    @ 
-        $missionName               @
-        "\n\n<F2>RULES/OBJECTIVES:\n"      @
-        "<F0>1) Destroy Enemy targets, Red has "@$Targets[*IDSTR_TEAM_RED]@" and Blue has "@$Targets[*IDSTR_TEAM_BLUE]@"\n\n"  @  // May change objectives...
-        "<F0>2) To assist in destroying enemies set up turrets, AI gaurds, etc.\n\n"  @
-        "<F0>3) Buy such assitacnces by harvesting ore and returning it to your team's supply dump(s)\n\n"  @
-        "<F2>Brief Explination:\n" @
-        "<F0>Targets are buildings in the enemy base named Red or Blue Target. Harvest ore by shuting down in ore patches." @
-        " An ore patch is a group of rocks in close proximity. Take ore back to your team's supply dump to make available " @
-        "for use. You can then create things such as turrets, AI gaurds, base expansions, etc. by scanning the " @
-        "corresponding pylons. After playing for a while you will (hopefully) be able to understand how it works. " @
-        "\nGoodluck, and spend wisely. \n\n   Download available at <F3>www.SS-Harvester.com\n\n" @
-        "<F2>VERSION and DATE:\n" @
-        "<F0>" @ $MapVersion @ " \n\n" @  
-        "<F4>Harvester by dull@ss-harvester.com\n";
-    if($MapBy != "") 
-        %rules = %rules @ $MapBy;
-    if($BootTKers == true)
-    { 
-        %rules = %rules @ "\n\n<F0>Team-killers will be kicked from the game after " @ $Warnings @ " offences. Every team-kill will result in death.\n"; 
-    }
-    if($AditionalRules) 
-        %rules = %rules @ $AdditionalRules;
-    %rules = %rules @ "<IDMULT_STD_TELEPORTER>";
-    setGameInfo(%rules); 
-    HarvOnMissionLoad();
+    HarvVehicleOnMessage(%a, %b, %c, %d, %e, %f, %g, %h);
 }
 
-function Har::onMissionEnd()
+function Draco::vehicle::onArrived(%this, %where)
 {
-    deleteObject("MissionGroup\\remove");
-    flushConsoleScheduler();
-    notifyMissionEnd();
+    %team = getTeam(%this);
+    if(%where==$Waypoint[%team])
+    {  
+        say("Everybody", 1,"<F5>DRACO: Payload Released.");
+        dropBomb(%team);
+    }
+    else if(%where==$Waypoint2[%team])
+    {  
+        schedule("$DracoLaunched[\""@%team@"\"] = false;",3);
+        schedule("deleteObject("@%this@");",3);
+    }
 }
 
 function Har::vehicle::onAdd(%vehicle)
@@ -439,116 +492,8 @@ function Har::vehicle::onScan(%scanned, %scanner)
     }
 }
 
-function structure::onScan(%building, %vehicle)
-{
-    %team = getTeam(%vehicle);
-    %edTeam = getTeam(%building);
-    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
-    if(%team != %edTeam) //================ Was the other team scanned? Then attack...
-    {
-        if(%scanner.Guards > 0)
-        {
-            for(%i=1; %i<=%scanner.guards; %i++)
-            {
-                %temp = %scanner.Guard[%i];
-                order(%temp, attack, %building);
-                %temp.guarding = %scanner;
-                %temp.ingPoint = false;
-                %time = getTime();
-                %scanned.time = %time;
-                schedule("guardUpdater("@%vehicle.Guard[%i]@",  \"" @ %time @ "\", " @ %scanner @ " );", 10);
-            }
-        }
-        return;
-    }
-}
-
-function nukeBuilder::structure::onScan(%silo, %veh)
-{
-    %team = getTeam(%veh);
-    %edTeam = getTeam(%silo);
-    %player = playerManager::vehicleIdToPlayerNum(%veh);
-    if(%team != %edTeam)
-    {
-        say(%player, %player, "<F5>This is not your team's nuclear silo.");
-        return;
-    }
-    if($Unallocated[%team] < 200)
-    {
-        say(%player, 35, "<F5>Not enough ore.");
-        return;
-    }
-    if($Nuke[%team] == "Used")
-    {
-        $Nuke[%team] = "Building";
-        teamTransmissions("<F5>Production of "@%team@"'s nuke will now begin.", %team);
-        $Unallocated[%team] = $Unallocated[%team] - 200;
-        schedule("buildNuke(\""@%team@"\");",3);
-    }
-    else if($Nuke[%team]=="Building")
-    {
-        say(%player, %player, "<F5>"@%team@"'s nuke is already being built.");
-    }
-    else if($Nuke[%team]=="Ready")
-    {
-        say(%player, %player, "<F5>"@%team@" already has a nuke built & ready to use.");
-    }
-}
-
-function buildNuke(%team)
-{
-    teamTransmissions("<F5>The nuke will be ready in 3 minutes...", %team);
-    $Ore[%team] = $Ore[%team] - 200;
-    $StartNukeTime[%team] = getCurrentTime();
-    teamHUDTimer(180, -1, "Building Nuke", 3, %team);
-    schedule("nukeReady(\""@%team@"\");",180);
-}
-
-function teamHUDTimer(%time, %dir, %head, %which, %team)
-{
-    %count = playerManager::getPlayerCount();
-    for(%i = 0; %i < %count; %i++)
-    {
-        %player = playerManager::getPlayerNum(%i);
-        if(getTeam(%player)==%team)
-        {
-            setHUDTimer(%time, %dir, %head, %which, %player);
-        }
-    }
-}
-
-function cancelTeamHUDTimer(%which, %team)
-{
-    %count = playerManager::getPlayerCount();
-    for(%i = 0; %i < %count; %i++)
-    {
-        %player = playerManager::getPlayerNum(%i);
-        if(getTeam(%player)==%team)
-        {
-            setHUDTimer(-1, 0, "", %which, %player);
-        }
-    }
-}
-
-function nukeReady(%team)
-{
-    if($CancelNuke[%team] == true)
-    {
-        $CancelNuke[%team] = false;
-        return;
-    }
-    $Nuke[%team] = "Ready";
-    if(%team == *IDSTR_TEAM_BLUE) 
-        %otherTeam = *IDSTR_TEAM_RED;
-    if(%team == *IDSTR_TEAM_RED) 
-        %otherTeam = *IDSTR_TEAM_BLUE;
-    teamTransmissions("<F5>"@%team@"'s nuke is ready to be used.", %team);
-    teamTransmissions("<F2>TAC-COM: Warning! Satellites have detected that "@%team@" has produced a nuclear weapon.", %otherTeam, "lock_warn.wav", 3);
-    schedule("teamTransmissions(\"<F5>Use LTADS to spot for the Draco bomber air strike.\", \""@%team@"\");",3);
-}
-
 function Har::vehicle::onSpot(%spotter, %target)
-   {
+{
     %player = playerManager::vehicleIdToPlayerNum(%spotter);
     %team = getTeam(%spotter);
     %edTeam = getTeam(%target);
@@ -617,179 +562,61 @@ function Har::vehicle::onSpot(%spotter, %target)
     }
 }
 
-function updatePosition(%target, %time, %cycle, %team)
+## -------------------------------------------------------------------- Structure
+function structure::onScan(%building, %vehicle)
 {
-    %x = getPosition(%target, x);
-    %y = getPosition(%target, y);
-    %z = getPosition(%target, z) + 200;
-    if(%cycle == 1)
+    %team = getTeam(%vehicle);
+    %edTeam = getTeam(%building);
+    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
+    if(%team != %edTeam) //================ Was the other team scanned? Then attack...
     {
-        %cycle = 2;
-    }
-    else if(%cycle == 2)
-    {
-        %time = %time + 5;
-        if(%time <= 10)
+        if(%scanner.Guards > 0)
         {
-            %cycle = 1;
+            for(%i=1; %i<=%scanner.guards; %i++)
+            {
+                %temp = %scanner.Guard[%i];
+                order(%temp, attack, %building);
+                %temp.guarding = %scanner;
+                %temp.ingPoint = false;
+                %time = getTime();
+                %scanned.time = %time;
+                schedule("guardUpdater("@%vehicle.Guard[%i]@",  \"" @ %time @ "\", " @ %scanner @ " );", 10);
+            }
         }
+        return;
     }
-    if(($TargetSpotted[%team] == true)&&($DracoLaunched[%team] == true)&&($Nuke[%team] == "Ready"))
+}
+
+function nukeBuilder::structure::onScan(%silo, %veh)
+{
+    %team = getTeam(%veh);
+    %edTeam = getTeam(%silo);
+    %player = playerManager::vehicleIdToPlayerNum(%veh);
+    if(%team != %edTeam)
     {
-        setPosition($Waypoint[%team], %x, %y, %z);
-        order($Draco[%team], guard, $Waypoints[%team]);
-        schedule("updatePosition(" @ %target @ ", " @ %time @ ", " @ %cycle @ ", " @ %team @ ");", %time);
-        echo("Updating Target Coordinates: " @ %team @ ", " @ %target @ ", " @ %time);
+        say(%player, %player, "<F5>This is not your team's nuclear silo.");
+        return;
     }
-}
-
-function launchDraco(%spotter, %target, %team)
-{
-    $DracoLaunched[%team] = true;
-    %x = getPosition(%target, x);
-    %y = getPosition(%target, y);
-    %z = getPosition(%target, z) + 350;
-    $Draco[%team] = newObject("Draco", flyer, 131);
-    addToSet("Missiongroup/remove", $Draco[%team]);
-    setTeam($Draco[%team], %team);
-    setPosition($Draco[%team], $DracoX[%team], $DracoY[%team], $DracoZ[%team]);
-    //setShapeVisibility($Waypoint[%team], false);
-    setPosition($Waypoint[%team], %x, %y, %z);
-    order($Draco[%team], speed, high);
-    order($Draco[%team], guard, $Waypoints[%team]);
-    %time = 5;
-    %cycle = 1;
-    schedule("updatePosition(" @ %target @ ", " @ %time @ ", " @ %cycle @ ", " @ %team @ ");", 5);
-    echo("Updating Target Coordinates: " @ %team @ ", " @ %target @ ", " @ %time);
-}
-
-function Draco::vehicle::onArrived(%this, %where)
-{
-    %team = getTeam(%this);
-    if(%where==$Waypoint[%team])
-    {  
-        say("Everybody", 1,"<F5>DRACO: Payload Released.");
-        dropBomb(%team);
-    }
-    else if(%where==$Waypoint2[%team])
-    {  
-        schedule("$DracoLaunched[\""@%team@"\"] = false;",3);
-        schedule("deleteObject("@%this@");",3);
-    }
-}
-
-function dropBomb(%team)
-{
-    $Nuke[%team] = "Used";
-    %x = getPosition($Waypoint[%team], x);
-    %y = getPosition($Waypoint[%team], y);
-    %z = getPosition($Waypoint[%team], z);
-    %bomb = $Bomb[%team];
-    setPosition(%bomb, %x, %y, %z);
-    schedule("fall("@%bomb@" , 40);",0.1);
-}
-
-function fall(%bomb, %frame)
-{
-    if(%frame<1)
+    if($Unallocated[%team] < 200)
     {
-        %team = getTeam(%bomb);
-        %target = $Target[%team];
-        nukeTarget(%target, %bomb);
+        say(%player, 35, "<F5>Not enough ore.");
+        return;
     }
-    else
+    if($Nuke[%team] == "Used")
     {
-        %frame--;
-        %x = getPosition(%bomb, x);
-        %y = getPosition(%bomb, y);
-        %z = getPosition(%bomb, z) - 5;
-        setPosition(%bomb, %x, %y, %z, 0, -90);
-        schedule("fall(" @ %bomb @ ", " @ %frame @ ");",0.1);
+        $Nuke[%team] = "Building";
+        teamTransmissions("<F5>Production of "@%team@"'s nuke will now begin.", %team);
+        $Unallocated[%team] = $Unallocated[%team] - 200;
+        schedule("buildNuke(\""@%team@"\");",3);
     }
-}
-
-function nukeTarget(%target, %bomb, %quiet)
-{
-    %team = getTeam(%bomb);
-    %x = getPosition(%target, x);
-    %y = getPosition(%target, y);
-    %z = getTerrainHeight(%x, %y);
-    %random = randomInt(0,2);
-    setPosition($Explosion[%team], %x, %y, %z);
-    setPosition($Shockwave[%team], %x, %y, (%z + 5));
-    playAnimSequence($Explosion[%team], 0, true);
-    playAnimSequence($Shockwave[%team], 0, true);
-    %time = getTime();
-    $LastNukeTime = %time;
-    damageArea(%bomb, 0, 0, 0, 350, 1000000);
-    if(getVehicleName(%target) == false)
-        damageObject(%target, 50000);
-    if(%quiet != true)
+    else if($Nuke[%team]=="Building")
     {
-        say("Everybody", 1, "<F5>"@%team@"'s nuke has detonated!", "sfx_fog.wav");
-        if(%random==0)
-        {
-            schedule("say(\"Everybody\", 1, \"<F5>DRACO: Yeah! Boom-baby-boom! hahah.\", \"M6_Saxon_yeahboom.WAV\");",3);
-        }
-        else if(%random==1)
-        {
-            schedule("say(\"Everybody\", 1, \"<F5>DRACO: Target eliminated.\", \"M9_Delta6_targetel.WAV\");",3);
-        }
-        else if(%random==2)
-        {
-            schedule("say(\"Everybody\", 1, \"<F5>DRACO: Target destroyed.\", \"M9_Delta6_targetd.WAV\");",3);
-        }
+        say(%player, %player, "<F5>"@%team@"'s nuke is already being built.");
     }
-    $Spotter[%team] = "Nobody";
-    $TargetSpotted[%team] = false;
-    schedule("setPosition($Explosion[\""@%team@"\"] , 5000, 5000, -1000);",1.067);
-    schedule("setPosition($Shockwave[\""@%team@"\"], 5000, 5000, -1000);",1.667);
-    schedule("playAnimSequence($Explosion[\""@%team@"\"], 0, false);",5);
-    schedule("playAnimSequence($Shockwave[\""@%team@"\"], 0, false);",5);
-    setPosition(%bomb, 5000, 5000, -1000);
-}
-
-function checkSpotDraco(%team)
-{
-    if($TargetSpotted[%team] == false)
+    else if($Nuke[%team]=="Ready")
     {
-        schedule("$DracoLaunched[\""@%team@"\"] = false;",3);
-        schedule("deleteObject($Draco[\""@%team@"\"]);",3);
-        schedule("$Draco[\""@%team@"\"] = \"\";",3);
+        say(%player, %player, "<F5>"@%team@" already has a nuke built & ready to use.");
     }
-    $InitCheck[%team] = false;
-}
-//MODIFIED BY DUN_STARSCAPER
-//
-function teamTransmissions(%text, %team, %wav, %plays)
-//{
-//%plays--;
-//%count = playerManager::getPlayerCount();
-//
-//for(%i = 0; %i < %count; %i++)
-// {
-// %player = playerManager::getPlayerNum(%i);
-// if(getTeam(%player)==%team)
-//  {
-//  say(%player, %player, %text, %wav);
-//  for(%a = 1; %a<=%plays; %a++)
-//   {say(%player,%player,%wav);}
-//  }
-// }
-//}
-
-function teamTransmissions(%text, %team, %wav, %plays)
-{
-    //More efficient to let the engine do the work of finding players -- dun
-    if(%team==*IDSTR_TEAM_RED) 
-        %teamID = IDSTR_TEAM_RED;
-    if(%team==*IDSTR_TEAM_BLUE) 
-        %teamID = IDSTR_TEAM_BLUE;
-    else 
-        %teamID = 0;
-    say(%teamID, %teamID, %text, %wav);
-    for(%a = 1; %a<%plays; %a++)
-        say(%teamID,%teamID,%wav);
 }
 
 function structure::onDestroyed(%building, %vehicle)
@@ -863,48 +690,6 @@ function structure::onDestroyed(%building, %vehicle)
     }
 }
 
-function Har::vehicle::onMessage(%a, %b, %c, %d, %e, %f, %g, %h)
-{
-    if(%b == "TargetDestroyed")
-    {
-        if($isType[%c] == "Turret")
-        {
-            if(getTeam(%c) != getTeam(%a))
-            {
-                if(%c.sent != true)
-                {
-                    %c.sent = true;
-                    turret::onDestroyed(%c, %a);
-                    HarvTurretOnDestroyed(%c, %a);
-                }
-            }
-        }
-    }
-    HarvVehicleOnMessage(%a, %b, %c, %d, %e, %f, %g, %h);
-}
-
-function turret::onDestroyed(%building, %vehicle)
-{
-    %time = getTime();
-    if(%time != $LastNukeTime)
-    { 
-        %message = getFancyDeathMessage(getHUDName(%building), getHUDName(%vehicle)); 
-    }
-    else
-    {
-        %name = getHUDName(%building);
-        %message = %name@" got caught in the nuclear blast!";
-    }
-    if(%message != "")
-    {
-        say( 0, 0, %message);
-    }
-    %team = getTeam(%vehicle);
-    %deadTeam = getTeam(%building);
-    $Kills[%team]++;
-    $Deaths[%deadTeam]++;
-}
-
 function target::structure::onDestroyed(%building, %vehicle)
 {
     %time = getTime();
@@ -951,120 +736,6 @@ function target::structure::onDestroyed(%building, %vehicle)
         say(0,0,"All of "@%deadTeam@"'s targets have been destroyed! "@%winner@" wins!");
         schedule("MissionEndConditionMet();", 3);
     }
-}
-
-function cancelNuke(%team)
-{
-    $Nuke[%team] = "Used";
-    $CancelNuke[%team] = true;
-    %time = getCurrentTime();
-    %elapsed = %time - $StartNukeTime[%team];
-    $StartNukeTime[%team] = "";
-    cancelTeamHUDTimer(3, %team);
-    %oreLeft = 200 - ((10/9) * %elapsed);
-    %oreLeft = round(%oreLeft);
-    $Ore[%team] = $Ore[%team] + %oreLeft;
-    $Unallocated[%team] = $Unallocated[%team] + %oreLeft;
-}
-
-function destroyNuke(%team, %building)
-{
-    $Nuke[%team] = "Used";
-    if($DracoLaunched[%team] == true) 
-        return;
-    %rand = randomInt(0, 3);
-    if(%rand > 0)
-    {
-        say(0,0,%team@"'s silo got destroyed in the nuclear blast!");
-        return;
-    }
-    %x = getPosition(%building, x);
-    %y = getPosition(%building, y);
-    %z = getPosition(%building, z);
-    setPosition($Bomb[%team], %x, %y, %z, 0, 90);
-    nukeTarget(%building, $Bomb[%team], true);
-    say(0,0,"<F5>"@%team@"'s nuke detonated when their silo was destroyed!", "sfx_fog.wav");
-}
-//======================  Anti-team-killer 
-function, and in the Dull style: too many options. See top for list.
-
-function Tker(%player)
-{
-    if(%player == 0) 
-        return;
-    if(%player.teamKills < $Warnings || $Warnings == "")
-    {
-        %vehicle = playerManager::PlayerNumToVehicleId(%player);
-        damageObject(%vehicle, 10000000);
-        say(%player, %player, "", "cy_rules_violated.wav");
-        if($BookTKers == true)
-            messageBox(%player, "You have killed a friendly. Continued team-killing will result in being removed from the game. Offences: " @ %player.teamKills );
-        else
-            messageBox(%player, "You have killed a friendly, don't do it again.");
-        return;
-    }
-    %name = getName(%player);
-    if($HarvLog == true)
-    {
-        %IP = getConnection(%player);
-        %time = getTime();
-        %date = getDate();
-        fileWrite("HarvestPlayersLog.cs", append, %player @ " " @ %name @ " " @ %IP @ " -- " @ %time @ " " @%date@" KICKED for team-killing with "@%player.teamKills@" offences.");
-    }
-    if($BootTKers != true) 
-        return;
-    say(%player, 0, "rules_violated.wav");
-    messageBox(%player, "You have killed team-mates too often. Come back when you have a better attitude.");
-    say(0, 35, "Kicking " @ %name @ " for too many team-kills.");
-    kick(%player);
-}
-//=============== Scrap metal (from dead vehicles) harvesting
-
-function scrap(%vehicle)
-{
-    %x = getPosition(%vehicle, x);
-    %y = getPosition(%vehicle, y);
-    %zt = getTerrainHeight(%x, %y);
-    %debries = newObject("Scrap", StaticShape, "DEBRIS_LRG_1.DTS");
-    %rand1 = randomInt(0, 360);
-    %rand2 = randomInt(0, 360);
-    setPosition(%debries, %x, %y, %zt, %rand1, %rand2);
-    setVehicleRadarVisible(%debries, true);   // Test
-    addToSet("MissionGroup\\remove", %debries);
-    %howMuch = %vehicle.cost / 1000; 
-    %howmuch = round(%howMuch);
-    if(%vehicle.oreCarried > 0)
-    { 
-        %howMuch = %howMuch + %vehicle.oreCarried; 
-    }
-    %debries.ore = %howMuch;
-    $isType[%debries] = "scrap";
-    echo(%debries, ", ", %debries.ore, " <= salvage at ", %x, " ", %y, " ", %zt);
-}
-
-function round(%value)
-{
-    %negative = false;
-    %inverse = %value * -1;
-    if(%inverse > %value)
-    {
-        %value = %inverse;
-        %negative = true;
-    }
-    %count = 0;
-    for(%i = %value; %i > 0; %i--)
-    {
-        %count++; 
-    }
-    if(%i < -0.5)
-    {
-        %count--;
-    }
-    if(%negative == true)
-    {
-        %count = %count * -1;
-    }
-    return %count;
 }
 
 function Scrap::structure::onAttacked(%debries, %vehicle)
@@ -1138,102 +809,6 @@ function structure::onAttacked(%attacked, %attacker)
     if($isType[%attacked] == "scrap")
         Scrap::structure::onAttacked(%attacked, %attacker);
 }
-//===============  Ore patch creation (Orogogus', edited for multiple zones for patches to spawn in)
-
-function spawnOrePatches()
-{
-    setUpOreArea();
-    for(%i=1; %i <= $orePatches; %i++)
-    {
-        %rand = randomInt(1, 100);    // Choose one of the available zones (% by area)
-        %which = $Position[%rand];
-        %x = randomInt($Xlow[%which], $Xhigh[%which]);
-        %y = randomInt($Ylow[%which], $Yhigh[%which]);
-        %z = getTerrainHeight(%x, %y);
-        echo("Spawn Patch "@ %i @" -- " @ %x @" "@ %y @" ("@%rand@": Zone "@%which@")");
-        setPosition($orePatch[%i], %x, %y, %z);
-        $orePatch[%i].number = %i;
-        for(%j=1; %j <= $orePatch[%i].maxRocks; %j++)
-        {
-            %dist = $orePatch[%i].size / 2;
-            %x1 = %x - %dist;
-            %x2 = %x + %dist;
-            %y1 = %y - %dist;
-            %y2 = %y + %dist;
-            %rx = randomInt(%x1, %x2);
-            %ry = randomInt(%y1, %y2);
-            %rz = getTerrainHeight(%rx, %ry);
-            %rRotZ = randomInt( 0, 360);
-            if($Planet != "Frosty")
-            %rRotX = randomInt( 0, 360);
-            %newRock = newObject($UseThisDTS, StaticShape, $UseThisDTS @ ".dts");
-            addToSet("MissionGroup\\remove", %newrock);
-            setPosition( %newRock, %rx, %ry, %rz, %rRotZ, %rRotX);
-            echo("Rock "@ %j @ ": " @ %newRock @" "@ %rx @" "@ %ry);
-            $orePatch[%i].rock[%j] = %newRock;
-            $isType[%newRock] = "ore";
-            $wasRock[%newRock] = %j;
-            $wasPatch[%newRock] = %i;
-        }
-        $orePatch[%i].oreRemaining = $orePatch[%i].maxOre;
-        $orePatch[%i].rocksRemaining = $orePatch[%i].maxRocks;
-        $orePatch[%i].orePerRock = $orePatch[%i].maxOre / $orePatch[%i].maxRocks;
-    }
-}
-
-function updateRocks(%trigger)
-{
-    %rockCount = %trigger.oreRemaining / %trigger.orePerRock;
-    if((%trigger.rocksRemaining - %rockCount) >= 1)
-    {
-        deleteObject(%trigger.rock[%trigger.rocksRemaining]);
-        %trigger.rocksRemaining--;
-    }
-}
-
-function setUpOreArea()
-{
-    echo("===Calculating Patch Spawn Frequency Rates===");
-    %howmany = $OreZones;
-    %total = 0;
-    for(%i=1; %i<=%howmany; %i++)
-    {
-        if($Xlow[%i] > $Xhigh[%i])
-        {
-            echo("Reversing X ", %i, "'s high and low");
-            %temp = $Xlow[%i];
-            $Xlow[%i] = $Xhigh[%i];
-            $Xhigh[%i] = %temp;
-        }
-        if($Ylow[%i] > $Yhigh[%i])
-        {
-            echo("Reversing Y ", %i, "'s high and low");
-            %temp = $Ylow[%i];
-            $Ylow[%i] = $Yhigh[%i];
-            $Yhigh[%i] = %temp;
-        }
-        %x = $Xhigh[%i] - $Xlow[%i];
-        %y = $Yhigh[%i] - $Ylow[%i];
-        %area[%i] = %x * %y;
-        %total = %total + %area[%i];
-        echo(%i, ": A:", %area[%i], " C:", %x, " ", %y, " T:", %total);
-    }
-    %start = 1;
-    for(%i=1; %i<=%howmany; %i++)
-    {
-        %freq = %area[%i] / %total;
-        %freq = %freq * 100;
-        %freq = round(%freq);
-        %stop = %start + %freq - 1;
-        for(%j=%start; %j<=%stop; %j++)
-        { 
-            $Position[%j] = %i;
-        }
-        echo(%i, ": ", %freq, "% -- ", %start, "-", %stop);
-        %start = %stop + 1;
-    }
-    echo("============Calculations Complete============");
-}
 
 function rock::structure::onDestroyed(%rock, %vehicle)
 {
@@ -1263,245 +838,6 @@ function rock::structure::onDestroyed(%rock, %vehicle)
     $wasRock[%newRock] = %j;
     $isType[%newRock] = "ore";
 }
-//=============== Respawn OrePatches (Copy/Edit of my edit of Orogogus' SpawnPatches)
-
-function respawnOrePatch(%i)
-{
-    for(%j=1; %j <= $orePatch[%i].maxrocks; %j++)
-    {
-        deleteObject($orePatch[%i].rock[%j]);   // Should already be gone, but...
-    }
-    %rand = randomInt(1, 100);
-    %which = $Position[%rand];
-    %x = randomInt($Xlow[%which], $Xhigh[%which]);
-    %y = randomInt($Ylow[%which], $Yhigh[%which]);
-    %z = getTerrainHeight(%x, %y);
-    echo("Re-Spawn Patch "@ %i @" -- " @ %x @" "@ %y@" ("@%rand@": Zone "@%which@")");
-    setPosition($orePatch[%i], %x, %y, %z);
-    for(%j=1; %j <= $orePatch[%i].maxRocks; %j++)
-    {
-        %dist = $orePatch[%i].size / 2;
-        %x1 = %x - %dist;
-        %x2 = %x + %dist;
-        %y1 = %y - %dist;
-        %y2 = %y + %dist;
-        %rx = randomInt(%x1, %x2);
-        %ry = randomInt(%y1, %y2);
-        %rz = getTerrainHeight(%rx, %ry);
-        %rRotZ = randomInt( 0, 360);
-        %rRotX = randomInt( 0, 360);
-        %newRock = newObject($UseThisDTS, StaticShape, $UseThisDTS @ ".dts");
-        addToSet("MissionGroup\\remove", %newrock);
-        setPosition( %newRock, %rx, %ry, %rz, %rRotZ, %rRotX);
-        echo("Rock "@ %newRock @" "@ %rx @" "@ %ry);
-        $orePatch[%i].rock[%j+1] = %newRock;
-        $isType[%newRock] = "ore";
-        $wasRock[%newRock] = %j;
-        $wasPatch[%newRock] = %i;
-    }
-    $orePatch[%i].oreRemaining = $orePatch[%i].maxOre;
-    $orePatch[%i].rocksRemaining = $orePatch[%i].maxRocks;
-}
-//===============  Ore mining 
-functions (Orogogus', slightly edited)
-
-function orePatch::trigger::onEnter(%trigger, %vehicle)
-{
-    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
-    echo(%player @ " enter patch " @ %trigger.number);
-    if(%player != 0)
-        say(%player, 35, "<F4>" @ %trigger.oreRemaining @ " units of ore in this patch.  Shutdown to mine.");
-    if(%vehicle.oreCarried >= %vehicle.oreCapacity)
-    {
-        if(%player != 0)
-            say(%player, 35, "<F4>Already carrying a full load of ore");
-        return;
-    }
-    %vehicle.inPatch = %trigger;
-    schedule( "harvestOre( " @ %trigger @ ", " @ %vehicle @ ");", 1);
-}
-
-function orePatch::trigger::onLeave(%trigger, %vehicle)
-{
-    %vehicle.inPatch = 0;
-}
-
-function harvestOre(%trigger, %vehicle)
-{
-    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
-    if(%vehicle.inPatch == 0) 
-        return;
-    if(isShutDown(%vehicle) == false) 
-    {
-        if(%vehicle.readyToMine == 1)
-        {
-            %vehicle.readyToMine = 0;
-            if(%player != 0)
-                say(%player, 35, "<F4>" @ %vehicle.oreCarried @ " units of ore in hold.");
-            schedule("harvestOre(" @ %trigger @ ", " @ %vehicle @ ");", 1);
-        }
-        else if(%vehicle.readyToMine == 0)
-        {
-            schedule("harvestOre(" @ %trigger @ ", " @ %vehicle @ ");", 1);
-        }
-        return;
-    }
-    %vehicle.readyToMine = 1;
-    %trigger.oreRemaining = %trigger.oreRemaining - %vehicle.harvestRate;
-    %vehicle.oreCarried = %vehicle.oreCarried + %vehicle.harvestRate;
-    if(%vehicle.oreCarried >= %vehicle.oreCapacity)
-    {
-        if(%player != 0)
-            say(%player, 35, "<F4>Full load!");
-        %remainder = %vehicle.oreCarried - %vehicle.oreCapacity;
-        %vehicle.oreCarried = %vehicle.oreCapacity;
-        %trigger.oreRemaining = %trigger.oreRemaining + %remainder;
-        updateRocks(%trigger);
-        return;
-    }
-    if(%trigger.oreRemaining <= 0)
-    {
-        if(%player != 0)
-            say(%player, 35, "<F4>Ore patch exhausted");
-        updateRocks(%trigger);
-        setPosition(%trigger, 10000, 10000, 10000);
-        schedule("respawnOrePatch("@%trigger.number@");", 45);
-        return;
-    }
-    schedule("harvestOre(" @ %trigger @ ", " @ %vehicle @ ");", 1);
-}
-//=============== Ore dumping 
-functions (Copy of Orogogus' Harvest Ore, modifyed to do the reverse, sort-of)
-
-function supplyDump::trigger::onEnter(%trigger, %vehicle)
-{
-    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
-    %trigName = getObjectName(%trigger);
-    %trigName = strAlign(5, left, %trigName);
-    %team = getTeam(%vehicle);
-    %CorrectTeam = 0;
-    if(%team == *IDSTR_TEAM_RED && %trigName == "RDump") 
-    { 
-        %CorrectTeam = 1; 
-    }
-    if(%team == *IDSTR_TEAM_BLUE && %trigName == "BDump") 
-    { 
-        %CorrectTeam = 1; 
-    }
-    if(%trigName != "RDump" && %trigName != "BDump") 
-    {
-        %CorrectTeam = 1; 
-    }
-    if(%CorrectTeam != 1)
-    {
-        if(%player != 0)
-            say(%player, 35, "<F4>This isn't your team's supply dump. \nShutdown to steal ore from the other team.");
-        %vehicle.inDump = 2;
-        %player.readyToDump = 0;
-        schedule( "stealOre(" @ %vehicle @ ", " @ %player @ ");", 0);
-        return;
-    }
-    if(%vehicle.oreCarried <= 0)
-    {
-        if(%player != 0)
-            say(%player, 35, "<F4>No Ore to dump. Your Team has " @ $Unallocated[%team] @ " units of ore.");
-        return;
-    }
-    if(%player != 0)
-        say(%player, 35, "<F4>Your team has " @ $Unallocated[%team] @ " units of ore. Shutdown to Dump.");
-    %vehicle.inDump = 1;
-    schedule( "dumpOre( " @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @ "\");", 1);
-}
-
-function stealOre(%vehicle, %player)  // Ore theft: misdeminor, up to $1,500 & 31 days in prison.
-{
-    %team = getTeam(%vehicle);
-    if(%vehicle.inDump != 2)
-    { 
-        return; 
-    }
-    if(isShutDown(%vehicle) == false)
-    {
-        schedule( "stealOre(" @ %vehicle @ ", " @ %player @ ");", 1);
-        return;
-    }
-    if(%team == *IDSTR_TEAM_BLUE) 
-        %unTeam = *IDSTR_TEAM_RED;
-    if(%team == *IDSTR_TEAM_RED) 
-        %unTeam = *IDSTR_TEAM_BLUE;
-    if($Unallocated[%unTeam] <= 0)
-    {
-        if(%player)
-            say(%player, 35, "<F4>" @ %unTeam @ " has no more ore to steal. Carrying " @ %vehicle.oreCarried @ " units of ore.");
-        %remainder = 0 - $Unallocated[%unTeam];
-        $Unallocated[%unTeam] = 0;
-        $Ore[%unTeam] = 0;
-        %vehicle.oreCarried = %vehicle.oreCarried - %remainder;
-        %vehicle.inDump = 0;
-        return;
-    }
-    $Ore[%unTeam] = $Ore[%unTeam] - %vehicle.dumpRate;
-    $Unallocated[%unTeam] = $Unallocated[%unTeam] - %vehicle.dumpRate;
-    %vehicle.oreCarried = %vehicle.oreCarried + %vehicle.dumpRate;
-    if(%vehicle.oreCarried >= %vehicle.oreCapacity)
-    {
-        %remainder = %vehicle.oreCarried - %vehicle.oreCapacity;
-        %vehicle.oreCarried = %vehicle.oreCapacity;
-        $Ore[%unTeam] = $Ore[%unTeam] + %remainder;
-        $Unallocated[%unTeam] = $Unallocated[%unTeam] + %remainder;
-        %vehicle.inDump = 0;
-        if(%player)
-            say(%player, 35, "<F4>Max capacity reached. Carrying " @ %vehicle.oreCarried @ " units of ore.");
-        return;
-    }
-    schedule( "stealOre(" @ %vehicle @ ", " @ %player @ ");", 1);
-}
-
-function supplyDump::trigger::onLeave(%trigger, %vehicle)
-{
-    %vehicle.inDump = 0;
-}
-
-function dumpOre(%trigger, %vehicle, %team)
-{
-    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
-    if(%vehicle.inDump == 0) 
-        return;
-    if(isShutDown(%vehicle) == false) 
-    {
-        if(%vehicle.readyToDump == 1)
-        {
-        %vehicle.readyToDump = 0;
-        if(%player != 0)
-            say(%player, 35, "<F4>" @ %vehicle.oreCarried @ " units of ore in hold.");
-        schedule("dumpOre(" @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @ "\");", 1);
-        }
-        else if(%vehicle.readyToDump == 0)
-        {
-            schedule("dumpOre(" @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @"\");", 1);
-        }
-        return;
-    }
-    %vehicle.readyToDump = 1;
-    %howmuch = %vehicle.dumpRate * $Multiplier[%team];
-    $Ore[%team] = $Ore[%team] + %howmuch;
-    $Unallocated[%team] = $Unallocated[%team] + %howmuch;
-    %vehicle.oreCarried = %vehicle.oreCarried - %vehicle.dumpRate;
-    if(%vehicle.oreCarried <= 0)
-    {
-        %remainder = %vehicle.oreCarried * -1;
-        %vehicle.oreCarried = 0;
-        %howmuchover = %remainder * $Multiplier[%team];
-        $Ore[%team] = $Ore[%team] - %howmuchover;
-        $Unallocated[%team] = $Unallocated[%team] - %howmuchover;
-        if(%player != 0)
-            say(%player, 0, "Dumping complete. Your team has " @ $Unallocated[%team] @ " units of ore.");
-        return;
-    }
-    schedule("dumpOre(" @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @ "\");", 1);
-}
-//=============== Building 
-functions (Finally, something I actually did)
 
 function Cancel::structure::onScan(%scanned, %scanner)
 {
@@ -1603,6 +939,862 @@ function expansionBuilder::structure::onScan(%scanned, %scanner)
     $Unallocated[%team] = $Unallocated[%team] - 80;
 }
 
+
+function SiloBuilder::structure::onScan(%scanned, %scanner)
+{
+    %player = playerManager::vehicleIdToPlayerNum(%scanner);
+    %team = getTeam(%player);
+    %teamScanned = getTeam(%scanned);
+    if(%team != %teamScanned)
+    {
+        say(%player, 35, "<F4>This is not your team's builder.");
+        return;
+    }
+    if($SiloBuilt[%team] == true)
+    {
+        say(%player, 35, "<F4>Your team already has a silo.");
+        return;
+    } 
+    if($Unallocated[%team] < 100)
+    {
+        say(%player, 35, "<F4>Not enough ore.");
+        return;
+    }
+    say(%player, 35, "<F4>Nuclear Silo to be created at your Base in 10 seconds.  Scan central pylon to cancel. You may have only one nuclear silo.");
+    schedule("BuildSilo(\""@%team@"\", "@%scanner@");", 10);
+    $Unallocated[%team] = $Unallocated[%team] - 100;
+}
+
+function repair::structure::onScan(%pole, %veh)
+{
+    %player = playerManager::vehicleIdToPlayerNum(%veh);
+    %PoleTeam = getTeam(%pole);
+    %team = getTeam(%veh);
+    if((%team != %PoleTeam) && (%PoleTeam != *IDSTR_TEAM_NUTRAL))
+    {
+        say(%player, 35, "This is not your team's repair pole.");
+        return;
+    }
+    if($Unallocated[%team] < 45)
+    {
+        say(%player, 35, "Not enough ore.");
+        return;
+    }
+    $Unallocated[%team] = $Unallocated[%team] - 45;
+    $Ore[%team] = $Ore[%team] - 45;
+    damageObject(%veh, -1000000);
+    damageObject(%veh, -1000000);
+    damageObject(%veh, -1000000);
+    damageObject(%veh, -1000000);
+    damageObject(%veh, -1000000);
+    damageObject(%veh, -1000000);
+    reloadObject(%veh, 1000000);
+    reloadObject(%veh, 1000000);
+    reloadObject(%veh, 1000000);
+    for(%i=1; %i<=%veh.Guards; %i++)
+    {
+        %j = %veh.Guard[%i];
+        damageObject(%j, -1000000);
+        damageObject(%j, -1000000);
+        damageObject(%j, -1000000);
+        damageObject(%j, -1000000);
+        damageObject(%j, -1000000);
+        damageObject(%j, -1000000);
+        reloadObject(%j, 1000000);
+        reloadObject(%j, 1000000);
+        reloadObject(%j, 1000000);
+    }
+    say(%player, 35, "Repairs Complete.");
+}
+
+function AiBuilder::structure::onScan(%scanned, %scanner)
+{
+    %which = getObjectName(%scanned);
+    %type = strAlign(6, left, %which);
+    %player = playerManager::vehicleIdToPlayerNum(%scanner);
+    %team = getTeam(%player);
+    %scannedTeam = getTeam(%scanned);
+    if(%team != %scannedTeam)
+    {
+        say(%player, 35, "<F4>This is not your team's builder.");
+        return;
+    }
+    %cost = $HarvAiCost[%type];
+    if($Unallocated[%team] < %cost)
+    {
+        say(%player, 35, "<F4>Not enough ore.");
+        return;
+    }
+    say(%player, 0, "<F4>" @ %type @ " to be built at your nav in 10 seconds. Scan it to have it guard your nav. Must be within the vacinity of one of your bases.");
+    schedule("AIbuilder(\"" @ %team @ "\", " @ %scanner @ ", \"" @ %type @ "\", " @ %cost @ ");", 10);
+    $Unallocated[%team] = $Unallocated[%team] - %cost;
+}
+
+## -------------------------------------------------------------------- Turret
+function turret::onDestroyed(%building, %vehicle)
+{
+    %time = getTime();
+    if(%time != $LastNukeTime)
+    { 
+        %message = getFancyDeathMessage(getHUDName(%building), getHUDName(%vehicle)); 
+    }
+    else
+    {
+        %name = getHUDName(%building);
+        %message = %name@" got caught in the nuclear blast!";
+    }
+    if(%message != "")
+    {
+        say( 0, 0, %message);
+    }
+    %team = getTeam(%vehicle);
+    %deadTeam = getTeam(%building);
+    $Kills[%team]++;
+    $Deaths[%deadTeam]++;
+}
+
+## -------------------------------------------------------------------- Trigger
+function orePatch::trigger::onEnter(%trigger, %vehicle)
+{
+    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
+    echo(%player @ " enter patch " @ %trigger.number);
+    if(%player != 0)
+        say(%player, 35, "<F4>" @ %trigger.oreRemaining @ " units of ore in this patch.  Shutdown to mine.");
+    if(%vehicle.oreCarried >= %vehicle.oreCapacity)
+    {
+        if(%player != 0)
+            say(%player, 35, "<F4>Already carrying a full load of ore");
+        return;
+    }
+    %vehicle.inPatch = %trigger;
+    schedule( "harvestOre( " @ %trigger @ ", " @ %vehicle @ ");", 1);
+}
+
+function orePatch::trigger::onLeave(%trigger, %vehicle)
+{
+    %vehicle.inPatch = 0;
+}
+
+function supplyDump::trigger::onEnter(%trigger, %vehicle)
+{
+    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
+    %trigName = getObjectName(%trigger);
+    %trigName = strAlign(5, left, %trigName);
+    %team = getTeam(%vehicle);
+    %CorrectTeam = 0;
+    if(%team == *IDSTR_TEAM_RED && %trigName == "RDump") 
+    { 
+        %CorrectTeam = 1; 
+    }
+    if(%team == *IDSTR_TEAM_BLUE && %trigName == "BDump") 
+    { 
+        %CorrectTeam = 1; 
+    }
+    if(%trigName != "RDump" && %trigName != "BDump") 
+    {
+        %CorrectTeam = 1; 
+    }
+    if(%CorrectTeam != 1)
+    {
+        if(%player != 0)
+            say(%player, 35, "<F4>This isn't your team's supply dump. \nShutdown to steal ore from the other team.");
+        %vehicle.inDump = 2;
+        %player.readyToDump = 0;
+        schedule( "stealOre(" @ %vehicle @ ", " @ %player @ ");", 0);
+        return;
+    }
+    if(%vehicle.oreCarried <= 0)
+    {
+        if(%player != 0)
+            say(%player, 35, "<F4>No Ore to dump. Your Team has " @ $Unallocated[%team] @ " units of ore.");
+        return;
+    }
+    if(%player != 0)
+        say(%player, 35, "<F4>Your team has " @ $Unallocated[%team] @ " units of ore. Shutdown to Dump.");
+    %vehicle.inDump = 1;
+    schedule( "dumpOre( " @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @ "\");", 1);
+}
+
+function supplyDump::trigger::onLeave(%trigger, %vehicle)
+{
+    %vehicle.inDump = 0;
+}
+
+
+## -------------------------------------------------------------------- Server
+function Har::setDefaultMissionOptions()
+{
+    $server::TeamPlay = true;
+    $server::AllowDeathmatch = false;
+    $server::AllowTeamPlay = true;    
+    $server::AllowTeamRed = true;
+    $server::AllowTeamBlue = true;
+    $server::AllowTeamYellow = false;
+    $server::AllowTeamPurple = false;
+    $server::disableTeamRed = false;
+    $server::disableTeamBlue = false;
+    $server::disableTeamYellow = true;
+    $server::disableTeamPurple = true;
+}
+
+function har::initScoreBoard()
+{
+    deleteVariables("$ScoreBoard::PlayerColumn*");
+    deleteVariables("$ScoreBoard::TeamColumn*");
+    $ScoreBoard::TeamColumnHeader1 = "Ore";
+    $ScoreBoard::TeamColumnHeader2 = *IDMULT_SCORE_PLAYERS;
+    $ScoreBoard::TeamColumnHeader3 = *IDMULT_SCORE_KILLS;
+    $ScoreBoard::TeamColumnHeader4 = *IDMULT_SCORE_DEATHS;
+    $ScoreBoard::TeamColumnHeader5 = "Nuke status";
+    $ScoreBoard::TeamColumnfunction1 = "getAvailableOre";
+    $ScoreBoard::TeamColumnfunction2 = "getNumberOfPlayersOnTeam";
+    $ScoreBoard::TeamColumnfunction3 = "getPermTeamKills";
+    $ScoreBoard::TeamColumnfunction4 = "getPermTeamDeaths";
+    $ScoreBoard::TeamColumnfunction5 = "getNukeStatus";
+    $ScoreBoard::PlayerColumnHeader1 = *IDMULT_SCORE_TEAM;
+    $ScoreBoard::PlayerColumnHeader2 = *IDMULT_SCORE_SQUAD;
+    $ScoreBoard::PlayerColumnHeader3 = "Ore";
+    $ScoreBoard::PlayerColumnHeader4 = *IDMULT_SCORE_KILLS;
+    $ScoreBoard::PlayerColumnHeader5 = *IDMULT_SCORE_DEATHS;
+    $ScoreBoard::PlayerColumnfunction1 = "getTeam";
+    $ScoreBoard::PlayerColumnfunction2 = "getSquad";
+    $ScoreBoard::PlayerColumnfunction3 = "getPlayerOre";
+    $ScoreBoard::PlayerColumnfunction4 = "getKills";
+    $ScoreBoard::PlayerColumnfunction5 = "getDeaths";
+    serverInitScoreBoard();
+}
+
+function har::setRules()
+{
+    %rules = "<F2>GAMETYPE:\n" @ 
+        "<F0>Harvester \n\n" @
+        "<tIDMULT_TDM_MAPNAME>"    @ 
+        $missionName               @
+        "\n\n<F2>RULES/OBJECTIVES:\n"      @
+        "<F0>1) Destroy Enemy targets, Red has "@$Targets[*IDSTR_TEAM_RED]@" and Blue has "@$Targets[*IDSTR_TEAM_BLUE]@"\n\n"  @  // May change objectives...
+        "<F0>2) To assist in destroying enemies set up turrets, AI gaurds, etc.\n\n"  @
+        "<F0>3) Buy such assitacnces by harvesting ore and returning it to your team's supply dump(s)\n\n"  @
+        "<F2>Brief Explination:\n" @
+        "<F0>Targets are buildings in the enemy base named Red or Blue Target. Harvest ore by shuting down in ore patches." @
+        " An ore patch is a group of rocks in close proximity. Take ore back to your team's supply dump to make available " @
+        "for use. You can then create things such as turrets, AI gaurds, base expansions, etc. by scanning the " @
+        "corresponding pylons. After playing for a while you will (hopefully) be able to understand how it works. " @
+        "\nGoodluck, and spend wisely. \n\n   Download available at <F3>www.SS-Harvester.com\n\n" @
+        "<F2>VERSION and DATE:\n" @
+        "<F0>" @ $MapVersion @ " \n\n" @  
+        "<F4>Harvester by dull@ss-harvester.com\n";
+    if($MapBy != "") 
+        %rules = %rules @ $MapBy;
+    if($BootTKers == true)
+    { 
+        %rules = %rules @ "\n\n<F0>Team-killers will be kicked from the game after " @ $Warnings @ " offences. Every team-kill will result in death.\n"; 
+    }
+    if($AditionalRules) 
+        %rules = %rules @ $AdditionalRules;
+    %rules = %rules @ "<IDMULT_STD_TELEPORTER>";
+    setGameInfo(%rules);
+    setGameInfo(%rules);
+    return %rules;
+}
+
+## -------------------------------------------------------------------- Custom Fn
+function har::InstantMoney(%value)     // Debugging, to be removed before finalization
+{
+    if(!%value) 
+        %value = 100;
+    $Ore[*IDSTR_TEAM_RED] = $Ore[*IDSTR_TEAM_RED] + %value;
+    $Unallocated[*IDSTR_TEAM_RED] = $Unallocated[*IDSTR_TEAM_RED] + %value;
+    $Ore[*IDSTR_TEAM_BLUE] = $Ore[*IDSTR_TEAM_BLUE] + %value;
+    $Unallocated[*IDSTR_TEAM_BLUE] = $Unallocated[*IDSTR_TEAM_BLUE] + %value;
+}
+
+function buildNuke(%team)
+{
+    teamTransmissions("<F5>The nuke will be ready in 3 minutes...", %team);
+    $Ore[%team] = $Ore[%team] - 200;
+    $StartNukeTime[%team] = getCurrentTime();
+    teamHUDTimer(180, -1, "Building Nuke", 3, %team);
+    schedule("nukeReady(\""@%team@"\");",180);
+}
+
+function teamHUDTimer(%time, %dir, %head, %which, %team)
+{
+    %count = playerManager::getPlayerCount();
+    for(%i = 0; %i < %count; %i++)
+    {
+        %player = playerManager::getPlayerNum(%i);
+        if(getTeam(%player)==%team)
+        {
+            setHUDTimer(%time, %dir, %head, %which, %player);
+        }
+    }
+}
+
+function cancelTeamHUDTimer(%which, %team)
+{
+    %count = playerManager::getPlayerCount();
+    for(%i = 0; %i < %count; %i++)
+    {
+        %player = playerManager::getPlayerNum(%i);
+        if(getTeam(%player)==%team)
+        {
+            setHUDTimer(-1, 0, "", %which, %player);
+        }
+    }
+}
+
+function nukeReady(%team)
+{
+    if($CancelNuke[%team] == true)
+    {
+        $CancelNuke[%team] = false;
+        return;
+    }
+    $Nuke[%team] = "Ready";
+    if(%team == *IDSTR_TEAM_BLUE) 
+        %otherTeam = *IDSTR_TEAM_RED;
+    if(%team == *IDSTR_TEAM_RED) 
+        %otherTeam = *IDSTR_TEAM_BLUE;
+    teamTransmissions("<F5>"@%team@"'s nuke is ready to be used.", %team);
+    teamTransmissions("<F2>TAC-COM: Warning! Satellites have detected that "@%team@" has produced a nuclear weapon.", %otherTeam, "lock_warn.wav", 3);
+    schedule("teamTransmissions(\"<F5>Use LTADS to spot for the Draco bomber air strike.\", \""@%team@"\");",3);
+}
+
+function updatePosition(%target, %time, %cycle, %team)
+{
+    %x = getPosition(%target, x);
+    %y = getPosition(%target, y);
+    %z = getPosition(%target, z) + 200;
+    if(%cycle == 1)
+    {
+        %cycle = 2;
+    }
+    else if(%cycle == 2)
+    {
+        %time = %time + 5;
+        if(%time <= 10)
+        {
+            %cycle = 1;
+        }
+    }
+    if(($TargetSpotted[%team] == true)&&($DracoLaunched[%team] == true)&&($Nuke[%team] == "Ready"))
+    {
+        setPosition($Waypoint[%team], %x, %y, %z);
+        order($Draco[%team], guard, $Waypoints[%team]);
+        schedule("updatePosition(" @ %target @ ", " @ %time @ ", " @ %cycle @ ", " @ %team @ ");", %time);
+        echo("Updating Target Coordinates: " @ %team @ ", " @ %target @ ", " @ %time);
+    }
+}
+
+function launchDraco(%spotter, %target, %team)
+{
+    $DracoLaunched[%team] = true;
+    %x = getPosition(%target, x);
+    %y = getPosition(%target, y);
+    %z = getPosition(%target, z) + 350;
+    $Draco[%team] = newObject("Draco", flyer, 131);
+    addToSet("Missiongroup/remove", $Draco[%team]);
+    setTeam($Draco[%team], %team);
+    setPosition($Draco[%team], $DracoX[%team], $DracoY[%team], $DracoZ[%team]);
+    //setShapeVisibility($Waypoint[%team], false);
+    setPosition($Waypoint[%team], %x, %y, %z);
+    order($Draco[%team], speed, high);
+    order($Draco[%team], guard, $Waypoints[%team]);
+    %time = 5;
+    %cycle = 1;
+    schedule("updatePosition(" @ %target @ ", " @ %time @ ", " @ %cycle @ ", " @ %team @ ");", 5);
+    echo("Updating Target Coordinates: " @ %team @ ", " @ %target @ ", " @ %time);
+}
+
+function dropBomb(%team)
+{
+    $Nuke[%team] = "Used";
+    %x = getPosition($Waypoint[%team], x);
+    %y = getPosition($Waypoint[%team], y);
+    %z = getPosition($Waypoint[%team], z);
+    %bomb = $Bomb[%team];
+    setPosition(%bomb, %x, %y, %z);
+    schedule("fall("@%bomb@" , 40);",0.1);
+}
+
+function fall(%bomb, %frame)
+{
+    if(%frame<1)
+    {
+        %team = getTeam(%bomb);
+        %target = $Target[%team];
+        nukeTarget(%target, %bomb);
+    }
+    else
+    {
+        %frame--;
+        %x = getPosition(%bomb, x);
+        %y = getPosition(%bomb, y);
+        %z = getPosition(%bomb, z) - 5;
+        setPosition(%bomb, %x, %y, %z, 0, -90);
+        schedule("fall(" @ %bomb @ ", " @ %frame @ ");",0.1);
+    }
+}
+
+function nukeTarget(%target, %bomb, %quiet)
+{
+    %team = getTeam(%bomb);
+    %x = getPosition(%target, x);
+    %y = getPosition(%target, y);
+    %z = getTerrainHeight(%x, %y);
+    %random = randomInt(0,2);
+    setPosition($Explosion[%team], %x, %y, %z);
+    setPosition($Shockwave[%team], %x, %y, (%z + 5));
+    playAnimSequence($Explosion[%team], 0, true);
+    playAnimSequence($Shockwave[%team], 0, true);
+    %time = getTime();
+    $LastNukeTime = %time;
+    damageArea(%bomb, 0, 0, 0, 350, 1000000);
+    if(getVehicleName(%target) == false)
+        damageObject(%target, 50000);
+    if(%quiet != true)
+    {
+        say("Everybody", 1, "<F5>"@%team@"'s nuke has detonated!", "sfx_fog.wav");
+        if(%random==0)
+        {
+            schedule("say(\"Everybody\", 1, \"<F5>DRACO: Yeah! Boom-baby-boom! hahah.\", \"M6_Saxon_yeahboom.WAV\");",3);
+        }
+        else if(%random==1)
+        {
+            schedule("say(\"Everybody\", 1, \"<F5>DRACO: Target eliminated.\", \"M9_Delta6_targetel.WAV\");",3);
+        }
+        else if(%random==2)
+        {
+            schedule("say(\"Everybody\", 1, \"<F5>DRACO: Target destroyed.\", \"M9_Delta6_targetd.WAV\");",3);
+        }
+    }
+    $Spotter[%team] = "Nobody";
+    $TargetSpotted[%team] = false;
+    schedule("setPosition($Explosion[\""@%team@"\"] , 5000, 5000, -1000);",1.067);
+    schedule("setPosition($Shockwave[\""@%team@"\"], 5000, 5000, -1000);",1.667);
+    schedule("playAnimSequence($Explosion[\""@%team@"\"], 0, false);",5);
+    schedule("playAnimSequence($Shockwave[\""@%team@"\"], 0, false);",5);
+    setPosition(%bomb, 5000, 5000, -1000);
+}
+
+function checkSpotDraco(%team)
+{
+    if($TargetSpotted[%team] == false)
+    {
+        schedule("$DracoLaunched[\""@%team@"\"] = false;",3);
+        schedule("deleteObject($Draco[\""@%team@"\"]);",3);
+        schedule("$Draco[\""@%team@"\"] = \"\";",3);
+    }
+    $InitCheck[%team] = false;
+}
+
+//MODIFIED BY DUN_STARSCAPER
+//
+// function teamTransmissions(%text, %team, %wav, %plays)
+//{
+//%plays--;
+//%count = playerManager::getPlayerCount();
+//
+//for(%i = 0; %i < %count; %i++)
+// {
+// %player = playerManager::getPlayerNum(%i);
+// if(getTeam(%player)==%team)
+//  {
+//  say(%player, %player, %text, %wav);
+//  for(%a = 1; %a<=%plays; %a++)
+//   {say(%player,%player,%wav);}
+//  }
+// }
+//}
+
+function teamTransmissions(%text, %team, %wav, %plays)
+{
+    //More efficient to let the engine do the work of finding players -- dun
+    if(%team==*IDSTR_TEAM_RED) 
+        %teamID = IDSTR_TEAM_RED;
+    if(%team==*IDSTR_TEAM_BLUE) 
+        %teamID = IDSTR_TEAM_BLUE;
+    else 
+        %teamID = 0;
+    say(%teamID, %teamID, %text, %wav);
+    for(%a = 1; %a<%plays; %a++)
+        say(%teamID,%teamID,%wav);
+}
+
+function cancelNuke(%team)
+{
+    $Nuke[%team] = "Used";
+    $CancelNuke[%team] = true;
+    %time = getCurrentTime();
+    %elapsed = %time - $StartNukeTime[%team];
+    $StartNukeTime[%team] = "";
+    cancelTeamHUDTimer(3, %team);
+    %oreLeft = 200 - ((10/9) * %elapsed);
+    %oreLeft = round(%oreLeft);
+    $Ore[%team] = $Ore[%team] + %oreLeft;
+    $Unallocated[%team] = $Unallocated[%team] + %oreLeft;
+}
+
+function destroyNuke(%team, %building)
+{
+    $Nuke[%team] = "Used";
+    if($DracoLaunched[%team] == true) 
+        return;
+    %rand = randomInt(0, 3);
+    if(%rand > 0)
+    {
+        say(0,0,%team@"'s silo got destroyed in the nuclear blast!");
+        return;
+    }
+    %x = getPosition(%building, x);
+    %y = getPosition(%building, y);
+    %z = getPosition(%building, z);
+    setPosition($Bomb[%team], %x, %y, %z, 0, 90);
+    nukeTarget(%building, $Bomb[%team], true);
+    say(0,0,"<F5>"@%team@"'s nuke detonated when their silo was destroyed!", "sfx_fog.wav");
+}
+
+
+//======================  Anti-team-killer 
+function Tker(%player)
+{
+    if(%player == 0) 
+        return;
+    if(%player.teamKills < $Warnings || $Warnings == "")
+    {
+        %vehicle = playerManager::PlayerNumToVehicleId(%player);
+        damageObject(%vehicle, 10000000);
+        say(%player, %player, "", "cy_rules_violated.wav");
+        if($BookTKers == true)
+            messageBox(%player, "You have killed a friendly. Continued team-killing will result in being removed from the game. Offences: " @ %player.teamKills );
+        else
+            messageBox(%player, "You have killed a friendly, don't do it again.");
+        return;
+    }
+    %name = getName(%player);
+    if($HarvLog == true)
+    {
+        %IP = getConnection(%player);
+        %time = getTime();
+        %date = getDate();
+        fileWrite("HarvestPlayersLog.cs", append, %player @ " " @ %name @ " " @ %IP @ " -- " @ %time @ " " @%date@" KICKED for team-killing with "@%player.teamKills@" offences.");
+    }
+    if($BootTKers != true) 
+        return;
+    say(%player, 0, "rules_violated.wav");
+    messageBox(%player, "You have killed team-mates too often. Come back when you have a better attitude.");
+    say(0, 35, "Kicking " @ %name @ " for too many team-kills.");
+    kick(%player);
+}
+
+function scrap(%vehicle)
+{
+    %x = getPosition(%vehicle, x);
+    %y = getPosition(%vehicle, y);
+    %zt = getTerrainHeight(%x, %y);
+    %debries = newObject("Scrap", StaticShape, "DEBRIS_LRG_1.DTS");
+    %rand1 = randomInt(0, 360);
+    %rand2 = randomInt(0, 360);
+    setPosition(%debries, %x, %y, %zt, %rand1, %rand2);
+    setVehicleRadarVisible(%debries, true);   // Test
+    addToSet("MissionGroup\\remove", %debries);
+    %howMuch = %vehicle.cost / 1000; 
+    %howmuch = round(%howMuch);
+    if(%vehicle.oreCarried > 0)
+    { 
+        %howMuch = %howMuch + %vehicle.oreCarried; 
+    }
+    %debries.ore = %howMuch;
+    $isType[%debries] = "scrap";
+    echo(%debries, ", ", %debries.ore, " <= salvage at ", %x, " ", %y, " ", %zt);
+}
+
+function round(%value)
+{
+    %negative = false;
+    %inverse = %value * -1;
+    if(%inverse > %value)
+    {
+        %value = %inverse;
+        %negative = true;
+    }
+    %count = 0;
+    for(%i = %value; %i > 0; %i--)
+    {
+        %count++; 
+    }
+    if(%i < -0.5)
+    {
+        %count--;
+    }
+    if(%negative == true)
+    {
+        %count = %count * -1;
+    }
+    return %count;
+}
+
+function updateRocks(%trigger)
+{
+    %rockCount = %trigger.oreRemaining / %trigger.orePerRock;
+    if((%trigger.rocksRemaining - %rockCount) >= 1)
+    {
+        deleteObject(%trigger.rock[%trigger.rocksRemaining]);
+        %trigger.rocksRemaining--;
+    }
+}
+
+function setUpOreArea()
+{
+    echo("===Calculating Patch Spawn Frequency Rates===");
+    %howmany = $OreZones;
+    %total = 0;
+    for(%i=1; %i<=%howmany; %i++)
+    {
+        if($Xlow[%i] > $Xhigh[%i])
+        {
+            echo("Reversing X ", %i, "'s high and low");
+            %temp = $Xlow[%i];
+            $Xlow[%i] = $Xhigh[%i];
+            $Xhigh[%i] = %temp;
+        }
+        if($Ylow[%i] > $Yhigh[%i])
+        {
+            echo("Reversing Y ", %i, "'s high and low");
+            %temp = $Ylow[%i];
+            $Ylow[%i] = $Yhigh[%i];
+            $Yhigh[%i] = %temp;
+        }
+        %x = $Xhigh[%i] - $Xlow[%i];
+        %y = $Yhigh[%i] - $Ylow[%i];
+        %area[%i] = %x * %y;
+        %total = %total + %area[%i];
+        echo(%i, ": A:", %area[%i], " C:", %x, " ", %y, " T:", %total);
+    }
+    %start = 1;
+    for(%i=1; %i<=%howmany; %i++)
+    {
+        %freq = %area[%i] / %total;
+        %freq = %freq * 100;
+        %freq = round(%freq);
+        %stop = %start + %freq - 1;
+        for(%j=%start; %j<=%stop; %j++)
+        { 
+            $Position[%j] = %i;
+        }
+        echo(%i, ": ", %freq, "% -- ", %start, "-", %stop);
+        %start = %stop + 1;
+    }
+    echo("============Calculations Complete============");
+}
+
+function respawnOrePatch(%i)
+{
+    for(%j=1; %j <= $orePatch[%i].maxrocks; %j++)
+    {
+        deleteObject($orePatch[%i].rock[%j]);   // Should already be gone, but...
+    }
+    %rand = randomInt(1, 100);
+    %which = $Position[%rand];
+    %x = randomInt($Xlow[%which], $Xhigh[%which]);
+    %y = randomInt($Ylow[%which], $Yhigh[%which]);
+    %z = getTerrainHeight(%x, %y);
+    echo("Re-Spawn Patch "@ %i @" -- " @ %x @" "@ %y@" ("@%rand@": Zone "@%which@")");
+    setPosition($orePatch[%i], %x, %y, %z);
+    for(%j=1; %j <= $orePatch[%i].maxRocks; %j++)
+    {
+        %dist = $orePatch[%i].size / 2;
+        %x1 = %x - %dist;
+        %x2 = %x + %dist;
+        %y1 = %y - %dist;
+        %y2 = %y + %dist;
+        %rx = randomInt(%x1, %x2);
+        %ry = randomInt(%y1, %y2);
+        %rz = getTerrainHeight(%rx, %ry);
+        %rRotZ = randomInt( 0, 360);
+        %rRotX = randomInt( 0, 360);
+        %newRock = newObject($UseThisDTS, StaticShape, $UseThisDTS @ ".dts");
+        addToSet("MissionGroup\\remove", %newrock);
+        setPosition( %newRock, %rx, %ry, %rz, %rRotZ, %rRotX);
+        echo("Rock "@ %newRock @" "@ %rx @" "@ %ry);
+        $orePatch[%i].rock[%j+1] = %newRock;
+        $isType[%newRock] = "ore";
+        $wasRock[%newRock] = %j;
+        $wasPatch[%newRock] = %i;
+    }
+    $orePatch[%i].oreRemaining = $orePatch[%i].maxOre;
+    $orePatch[%i].rocksRemaining = $orePatch[%i].maxRocks;
+}
+
+function harvestOre(%trigger, %vehicle)
+{
+    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
+    if(%vehicle.inPatch == 0) 
+        return;
+    if(isShutDown(%vehicle) == false) 
+    {
+        if(%vehicle.readyToMine == 1)
+        {
+            %vehicle.readyToMine = 0;
+            if(%player != 0)
+                say(%player, 35, "<F4>" @ %vehicle.oreCarried @ " units of ore in hold.");
+            schedule("harvestOre(" @ %trigger @ ", " @ %vehicle @ ");", 1);
+        }
+        else if(%vehicle.readyToMine == 0)
+        {
+            schedule("harvestOre(" @ %trigger @ ", " @ %vehicle @ ");", 1);
+        }
+        return;
+    }
+    %vehicle.readyToMine = 1;
+    %trigger.oreRemaining = %trigger.oreRemaining - %vehicle.harvestRate;
+    %vehicle.oreCarried = %vehicle.oreCarried + %vehicle.harvestRate;
+    if(%vehicle.oreCarried >= %vehicle.oreCapacity)
+    {
+        if(%player != 0)
+            say(%player, 35, "<F4>Full load!");
+        %remainder = %vehicle.oreCarried - %vehicle.oreCapacity;
+        %vehicle.oreCarried = %vehicle.oreCapacity;
+        %trigger.oreRemaining = %trigger.oreRemaining + %remainder;
+        updateRocks(%trigger);
+        return;
+    }
+    if(%trigger.oreRemaining <= 0)
+    {
+        if(%player != 0)
+            say(%player, 35, "<F4>Ore patch exhausted");
+        updateRocks(%trigger);
+        setPosition(%trigger, 10000, 10000, 10000);
+        schedule("respawnOrePatch("@%trigger.number@");", 45);
+        return;
+    }
+    schedule("harvestOre(" @ %trigger @ ", " @ %vehicle @ ");", 1);
+}
+
+function spawnOrePatches()
+{
+    setUpOreArea();
+    for(%i=1; %i <= $orePatches; %i++)
+    {
+        %rand = randomInt(1, 100);    // Choose one of the available zones (% by area)
+        %which = $Position[%rand];
+        %x = randomInt($Xlow[%which], $Xhigh[%which]);
+        %y = randomInt($Ylow[%which], $Yhigh[%which]);
+        %z = getTerrainHeight(%x, %y);
+        echo("Spawn Patch "@ %i @" -- " @ %x @" "@ %y @" ("@%rand@": Zone "@%which@")");
+        setPosition($orePatch[%i], %x, %y, %z);
+        $orePatch[%i].number = %i;
+        for(%j=1; %j <= $orePatch[%i].maxRocks; %j++)
+        {
+            %dist = $orePatch[%i].size / 2;
+            %x1 = %x - %dist;
+            %x2 = %x + %dist;
+            %y1 = %y - %dist;
+            %y2 = %y + %dist;
+            %rx = randomInt(%x1, %x2);
+            %ry = randomInt(%y1, %y2);
+            %rz = getTerrainHeight(%rx, %ry);
+            %rRotZ = randomInt( 0, 360);
+            if($Planet != "Frosty")
+            %rRotX = randomInt( 0, 360);
+            %newRock = newObject($UseThisDTS, StaticShape, $UseThisDTS @ ".dts");
+            addToSet("MissionGroup\\remove", %newrock);
+            setPosition( %newRock, %rx, %ry, %rz, %rRotZ, %rRotX);
+            echo("Rock "@ %j @ ": " @ %newRock @" "@ %rx @" "@ %ry);
+            $orePatch[%i].rock[%j] = %newRock;
+            $isType[%newRock] = "ore";
+            $wasRock[%newRock] = %j;
+            $wasPatch[%newRock] = %i;
+        }
+        $orePatch[%i].oreRemaining = $orePatch[%i].maxOre;
+        $orePatch[%i].rocksRemaining = $orePatch[%i].maxRocks;
+        $orePatch[%i].orePerRock = $orePatch[%i].maxOre / $orePatch[%i].maxRocks;
+    }
+}
+
+function stealOre(%vehicle, %player)  // Ore theft: misdeminor, up to $1,500 & 31 days in prison.
+{
+    %team = getTeam(%vehicle);
+    if(%vehicle.inDump != 2)
+    { 
+        return; 
+    }
+    if(isShutDown(%vehicle) == false)
+    {
+        schedule( "stealOre(" @ %vehicle @ ", " @ %player @ ");", 1);
+        return;
+    }
+    if(%team == *IDSTR_TEAM_BLUE) 
+        %unTeam = *IDSTR_TEAM_RED;
+    if(%team == *IDSTR_TEAM_RED) 
+        %unTeam = *IDSTR_TEAM_BLUE;
+    if($Unallocated[%unTeam] <= 0)
+    {
+        if(%player)
+            say(%player, 35, "<F4>" @ %unTeam @ " has no more ore to steal. Carrying " @ %vehicle.oreCarried @ " units of ore.");
+        %remainder = 0 - $Unallocated[%unTeam];
+        $Unallocated[%unTeam] = 0;
+        $Ore[%unTeam] = 0;
+        %vehicle.oreCarried = %vehicle.oreCarried - %remainder;
+        %vehicle.inDump = 0;
+        return;
+    }
+    $Ore[%unTeam] = $Ore[%unTeam] - %vehicle.dumpRate;
+    $Unallocated[%unTeam] = $Unallocated[%unTeam] - %vehicle.dumpRate;
+    %vehicle.oreCarried = %vehicle.oreCarried + %vehicle.dumpRate;
+    if(%vehicle.oreCarried >= %vehicle.oreCapacity)
+    {
+        %remainder = %vehicle.oreCarried - %vehicle.oreCapacity;
+        %vehicle.oreCarried = %vehicle.oreCapacity;
+        $Ore[%unTeam] = $Ore[%unTeam] + %remainder;
+        $Unallocated[%unTeam] = $Unallocated[%unTeam] + %remainder;
+        %vehicle.inDump = 0;
+        if(%player)
+            say(%player, 35, "<F4>Max capacity reached. Carrying " @ %vehicle.oreCarried @ " units of ore.");
+        return;
+    }
+    schedule( "stealOre(" @ %vehicle @ ", " @ %player @ ");", 1);
+}
+
+function dumpOre(%trigger, %vehicle, %team)
+{
+    %player = playerManager::vehicleIdToPlayerNum(%vehicle);
+    if(%vehicle.inDump == 0) 
+        return;
+    if(isShutDown(%vehicle) == false) 
+    {
+        if(%vehicle.readyToDump == 1)
+        {
+        %vehicle.readyToDump = 0;
+        if(%player != 0)
+            say(%player, 35, "<F4>" @ %vehicle.oreCarried @ " units of ore in hold.");
+        schedule("dumpOre(" @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @ "\");", 1);
+        }
+        else if(%vehicle.readyToDump == 0)
+        {
+            schedule("dumpOre(" @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @"\");", 1);
+        }
+        return;
+    }
+    %vehicle.readyToDump = 1;
+    %howmuch = %vehicle.dumpRate * $Multiplier[%team];
+    $Ore[%team] = $Ore[%team] + %howmuch;
+    $Unallocated[%team] = $Unallocated[%team] + %howmuch;
+    %vehicle.oreCarried = %vehicle.oreCarried - %vehicle.dumpRate;
+    if(%vehicle.oreCarried <= 0)
+    {
+        %remainder = %vehicle.oreCarried * -1;
+        %vehicle.oreCarried = 0;
+        %howmuchover = %remainder * $Multiplier[%team];
+        $Ore[%team] = $Ore[%team] - %howmuchover;
+        $Unallocated[%team] = $Unallocated[%team] - %howmuchover;
+        if(%player != 0)
+            say(%player, 0, "Dumping complete. Your team has " @ $Unallocated[%team] @ " units of ore.");
+        return;
+    }
+    schedule("dumpOre(" @ %trigger @ ", " @ %vehicle @ ", \"" @ %team @ "\");", 1);
+}
+
 function baseExpander(%team, %vehicle)
 {
     %player = playerManager::VehicleIdToPlayerNum(%vehicle);
@@ -1680,31 +1872,6 @@ function baseExpander(%team, %vehicle)
     }
     teamTransmissions("<F4>Base Extended. You can now build things farther away (think \"turrets closer to ore patches\").", %team);
     addToSet("MissionGroup\\remove", %newMarker); 
-}
-
-function SiloBuilder::structure::onScan(%scanned, %scanner)
-{
-    %player = playerManager::vehicleIdToPlayerNum(%scanner);
-    %team = getTeam(%player);
-    %teamScanned = getTeam(%scanned);
-    if(%team != %teamScanned)
-    {
-        say(%player, 35, "<F4>This is not your team's builder.");
-        return;
-    }
-    if($SiloBuilt[%team] == true)
-    {
-        say(%player, 35, "<F4>Your team already has a silo.");
-        return;
-    } 
-    if($Unallocated[%team] < 100)
-    {
-        say(%player, 35, "<F4>Not enough ore.");
-        return;
-    }
-    say(%player, 35, "<F4>Nuclear Silo to be created at your Base in 10 seconds.  Scan central pylon to cancel. You may have only one nuclear silo.");
-    schedule("BuildSilo(\""@%team@"\", "@%scanner@");", 10);
-    $Unallocated[%team] = $Unallocated[%team] - 100;
 }
 
 function BuildSilo(%team, %vehicle)
@@ -1831,32 +1998,6 @@ function StuffBuilder(%team, %vehicle, %type, %cost)
     setTeam(%building, %team);
     teamTransmissions("<F4>Build Completed: " @ %type, %team);
     addToSet("MissionGroup\\remove", %building); 
-}
-//=================================================================================
-//===============AI STUFF!!========================================================
-//=================================================================================
-
-function AiBuilder::structure::onScan(%scanned, %scanner)
-{
-    %which = getObjectName(%scanned);
-    %type = strAlign(6, left, %which);
-    %player = playerManager::vehicleIdToPlayerNum(%scanner);
-    %team = getTeam(%player);
-    %scannedTeam = getTeam(%scanned);
-    if(%team != %scannedTeam)
-    {
-        say(%player, 35, "<F4>This is not your team's builder.");
-        return;
-    }
-    %cost = $HarvAiCost[%type];
-    if($Unallocated[%team] < %cost)
-    {
-        say(%player, 35, "<F4>Not enough ore.");
-        return;
-    }
-    say(%player, 0, "<F4>" @ %type @ " to be built at your nav in 10 seconds. Scan it to have it guard your nav. Must be within the vacinity of one of your bases.");
-    schedule("AIbuilder(\"" @ %team @ "\", " @ %scanner @ ", \"" @ %type @ "\", " @ %cost @ ");", 10);
-    $Unallocated[%team] = $Unallocated[%team] - %cost;
 }
 
 function AIbuilder(%team, %vehicle, %type, %cost)
@@ -2028,8 +2169,6 @@ function shuffleGuards(%vehicle, %which)
     }
     %vehicle.Guards--;
 }
-//===============Admin 
-function===================
 
 function FindPlayers()
 {
@@ -2070,7 +2209,6 @@ function showOre()
     echo("Red: Un-Alocated: "@$Unallocated["Red Team"]@"; Ore: "@$Ore["Red Team"]);
     echo("Blue: Un-Alocated: "@$Unallocated["Blue Team"]@"; Ore: "@$Ore["Blue Team"]);
 }
-//========================================= Long static array list (Prices suggested by Sentinal, they may get edited for balance)
 
 function setHarvAiVar()
 {
@@ -2168,354 +2306,6 @@ function setHarvAiVar()
     $HarvAiType["C-Exec"] = Herc;
     $HarvAiType["P-Exec"] = Herc;
 }
-//============================================\\
-//  || From Mike The Goad's scoreBoard.cs ||  \\
-//  \/        Slightly Modifyed           \/  \\
-//============================================\\
-
-function wilzuun::initScoreBoard()
-{
-    deleteVariables("$ScoreBoard::PlayerColumn*");
-    deleteVariables("$ScoreBoard::TeamColumn*");
-    $ScoreBoard::TeamColumnHeader1 = "Ore";
-    $ScoreBoard::TeamColumnHeader2 = *IDMULT_SCORE_PLAYERS;
-    $ScoreBoard::TeamColumnHeader3 = *IDMULT_SCORE_KILLS;
-    $ScoreBoard::TeamColumnHeader4 = *IDMULT_SCORE_DEATHS;
-    $ScoreBoard::TeamColumnHeader5 = "Nuke status";
-    $ScoreBoard::TeamColumn
-function1 = "getAvailableOre";
-    $ScoreBoard::TeamColumn
-function2 = "getNumberOfPlayersOnTeam";
-    $ScoreBoard::TeamColumn
-function3 = "getPermTeamKills";
-    $ScoreBoard::TeamColumn
-function4 = "getPermTeamDeaths";
-    $ScoreBoard::TeamColumn
-function5 = "getNukeStatus";
-    $ScoreBoard::PlayerColumnHeader1 = *IDMULT_SCORE_TEAM;
-    $ScoreBoard::PlayerColumnHeader2 = *IDMULT_SCORE_SQUAD;
-    $ScoreBoard::PlayerColumnHeader3 = "Ore";
-    $ScoreBoard::PlayerColumnHeader4 = *IDMULT_SCORE_KILLS;
-    $ScoreBoard::PlayerColumnHeader5 = *IDMULT_SCORE_DEATHS;
-    $ScoreBoard::PlayerColumn
-function1 = "getTeam";
-    $ScoreBoard::PlayerColumn
-function2 = "getSquad";
-    $ScoreBoard::PlayerColumn
-function3 = "getPlayerOre";
-    $ScoreBoard::PlayerColumn
-function4 = "getKills";
-    $ScoreBoard::PlayerColumn
-function5 = "getDeaths";
-    serverInitScoreBoard();
-}
-
-function getNukeStatus(%a)
-{
-    if(%a == "1" || %a == "8") 
-        return "---";
-    if(%a == "2") 
-        %team = *IDSTR_TEAM_BLUE;
-    if(%a == "4") 
-        %team = *IDSTR_TEAM_RED;
-    if ($SiloBuilt[%team] == false) 
-        return "No silo";
-    return $Nuke[%team];
-}
-
-function getPermTeamKills(%a)
-{
-    if(%a == "1" || %a == "8") 
-        return "---";
-    if(%a == "2") 
-        return $Kills[*IDSTR_TEAM_BLUE];
-    if(%a == "4") 
-        return $Kills[*IDSTR_TEAM_RED];
-}
-
-function getPermTeamDeaths(%a)
-{
-    if(%a == "1" || %a == "8") 
-        return "---";
-    if(%a == "2") 
-        return $Deaths[*IDSTR_TEAM_BLUE];
-    if(%a == "4") 
-        return $Deaths[*IDSTR_TEAM_RED];
-}
-
-function getAvailableOre(%a)
-{
-    if(%a == "1" || %a == "8") 
-        return "---";
-    if(%a == "2") 
-        return $Unallocated[*IDSTR_TEAM_BLUE];
-    if(%a == "4") 
-        return $Unallocated[*IDSTR_TEAM_RED];
-}
-
-function getPlayerOre(%player)
-{
-    %vehicle = playerManager::playerNumToVehicleId(%player);
-    if(%vehicle == "") 
-        return 0;
-    return %vehicle.oreCarried;
-}
-//===================================\\
-//  || From MultiPlayerStdLib.cs ||  \\
-//  \/    Slightly Formatted     \/  \\
-//===================================\\
-
-
-function getNumberOfPlayersOnTeam(%bits)
-{
-    %name = getTeamNameFromTeamId(%bits);
-    %count = 0;
-    %playerCount = playerManager::getPlayerCount();
-    for (%p = 0; %p < %playerCount; %p++)
-    {
-        %player = playerManager::getPlayerNum(%p);
-        %team = getTeam(%player);
-        if(%team == %name)
-        {
-            %count++;
-        }      
-    }
-    return %count;
-}
-//=============================\\
-//  || Stuff--ore capacity ||  \\
-//  \/                     \/  \\
-//=============================\\
-
-
-function getVehicleCapacity(%vehicle)
-{
-    %vehicleName = getVehicleName(%vehicle);  
-    %vehCapacity = $Capacity[%vehicleName];
-    if(%vehCapacity == 0) 
-        %vehCapacity = 10;
-    return %vehCapacity;
-}
-$Capacity["Knight's Apocalypse"] = 50;
-$Capacity["Basilisk"] = 35;
-$Capacity["Knight's Basilisk"] = 35;
-$Capacity["Emancipator"] = 25;
-$Capacity["Gorgon"] = 45;
-$Capacity["Knight's Gorgon"] = 45;
-$Capacity["Minotaur"] = 30;
-$Capacity["Knight's Minotaur"] = 30;
-$Capacity["Olympian"] = 50;
-$Capacity["Talon"] = 20;
-$Capacity["Knight's Talon"] = 20;
-$Capacity["Adjudicator"] = 40;
-$Capacity["Platinum Guard Adjudicator"] = 40;
-$Capacity["Executioner"] = 55;
-$Capacity["Platinum Guard Executioner"] = 55;
-$Capacity["Goad"] = 20;
-$Capacity["Shepherd"] = 30;
-$Capacity["Seeker"] = 20;
-$Capacity["Metagen Goad"] = 20;
-$Capacity["Metagen Seeker"] = 20;
-$Capacity["Metagen Shepherd"] = 30;
-$Capacity["Avenger"] = 30;
-$Capacity["Disrupter"] = 30;
-$Capacity["Knight's Disrupter"] = 30;
-$Capacity["Dreadlock"] = 30;
-$Capacity["Harabec's Predator"] = 30;
-$Capacity["Myrmidon"] = 30;
-$Capacity["Knight's Myrmidon"] = 30;
-$Capacity["Paladin"] = 30;
-$Capacity["Knight's Paladin"] = 30;
-$Capacity["Bolo"] = 30;
-$Capacity["Recluse"] = 30;
-//======================\\
-//  || Repair Pylon ||  \\
-//  \/              \/  \\
-//======================\\
-
-function repair::structure::onScan(%pole, %veh)
-{
-    %player = playerManager::vehicleIdToPlayerNum(%veh);
-    %PoleTeam = getTeam(%pole);
-    %team = getTeam(%veh);
-    if((%team != %PoleTeam) && (%PoleTeam != *IDSTR_TEAM_NUTRAL))
-    {
-        say(%player, 35, "This is not your team's repair pole.");
-        return;
-    }
-    if($Unallocated[%team] < 45)
-    {
-        say(%player, 35, "Not enough ore.");
-        return;
-    }
-    $Unallocated[%team] = $Unallocated[%team] - 45;
-    $Ore[%team] = $Ore[%team] - 45;
-    damageObject(%veh, -1000000);
-    damageObject(%veh, -1000000);
-    damageObject(%veh, -1000000);
-    damageObject(%veh, -1000000);
-    damageObject(%veh, -1000000);
-    damageObject(%veh, -1000000);
-    reloadObject(%veh, 1000000);
-    reloadObject(%veh, 1000000);
-    reloadObject(%veh, 1000000);
-    for(%i=1; %i<=%veh.Guards; %i++)
-    {
-        %j = %veh.Guard[%i];
-        damageObject(%j, -1000000);
-        damageObject(%j, -1000000);
-        damageObject(%j, -1000000);
-        damageObject(%j, -1000000);
-        damageObject(%j, -1000000);
-        damageObject(%j, -1000000);
-        reloadObject(%j, 1000000);
-        reloadObject(%j, 1000000);
-        reloadObject(%j, 1000000);
-    }
-    say(%player, 35, "Repairs Complete.");
-}
-//=======================================================\\
-//  ||      Most of SalvageScores.cs by Orogogus     ||  \\
-//  \/ Used for Salvageable Ore (from dead vehicles) \/  \\
-//=======================================================\\
-
-function checkValue(%vehicle)
-{
-    %totalCost = getVehValue(%vehicle);
-    // iterate through the component list
-    %componentCount = getComponentCount(%vehicle);
-    %index = 0;
-    while(%index < %componentCount) 
-    {
-        %id = getComponentId(%vehicle, %index);
-        %compValue = compIdValue(%id);
-        %totalCost = %totalCost + %compValue;
-        %index++;
-    }
-    // iterate through the weapon list
-    %weapCount = getWeaponCount(%vehicle);
-    %index = 0;
-    while(%index < %weapCount) 
-    {
-        %id = getWeaponId(%vehicle, %index);
-        %weapValue = weapIdValue(%id);
-        %totalCost = %totalCost + %weapValue;
-        %index++;
-    }
-    return(%totalCost);
-}
-//============
-
-function weapIdValue(%id) 
-{ 
-    if ( $weaponST[%id] != "" ) 
-    { 
-        return($weaponST[%id]);
-    }
-    return(0);
-}
-
-function compIdValue(%id) 
-{ 
-    if ( $componentST[%id] != "" ) 
-    { 
-        return($componentST[%id]);
-    }
-    return(0);
-}
-//=============
-
-function getVehValue(%vehicleId)
-{
-    %vehicleName = getVehicleName(%vehicleId);  
-    %vehValue = getVehValue1(%vehicleName);
-    return %vehValue;
-}
-
-function getVehValue1(%vehicle)
-{
-    if(%vehicle == "Apocalypse") 
-        return 2540;
-    else if(%vehicle == "Knight's Apocalypse") 
-        return 2670;
-    else if(%vehicle == "Basilisk") 
-        return 2000;
-    else if(%vehicle == "Knight's Basilisk") 
-        return 2325;
-    else if(%vehicle == "Emancipator") 
-        return 1730;
-    else if(%vehicle == "Gorgon") 
-        return 3350;
-    else if(%vehicle == "Knight's Gorgon") 
-        return 3805;
-    else if(%vehicle == "Minotaur") 
-        return 1300;
-    else if(%vehicle == "Knight's Minotaur") 
-        return 1650;
-    else if(%vehicle == "Olympian") 
-        return 3150;
-    else if(%vehicle == "Talon") 
-        return 1000;
-    else if(%vehicle == "Knight's Talon") 
-        return 1250;
-    else 
-        getVehValue2(%vehicle);
-}
-
-function getVehValue2(%vehicle)
-{
-    if(%vehicle == "Adjudicator") 
-        return 2705;
-    else if(%vehicle == "Platinum Guard Adjudicator") 
-        return 2995;
-    else if(%vehicle == "Executioner") 
-        return 3600;
-    else if(%vehicle == "Platinum Guard Executioner") 
-        return 4010;
-    else if(%vehicle == "Goad") 
-        return 1600;
-    else if(%vehicle == "Shepherd") 
-        return 1810;
-    else if(%vehicle == "Seeker") 
-        return 1205;
-    else if(%vehicle == "Metagen Goad") 
-        return 1600;
-    else if(%vehicle == "Metagen Seeker") 
-        return 1205;
-    else if(%vehicle == "Metagen Shepherd") 
-        return 1810;
-    else 
-        getVehValue3(%vehicle);
-}
-
-function getVehValue3(%vehicle)
-{
-    if(%vehicle == "Avenger") 
-        return 1830;
-    else if(%vehicle == "Disrupter") 
-        return 2700;
-    else if(%vehicle == "Knight's Disrupter") 
-        return 2880;
-    else if(%vehicle == "Dreadlock") 
-        return 2215;
-    else if(%vehicle == "Harabec's Predator") 
-        return 3510;
-    else if(%vehicle == "Myrmidon") 
-        return 3035;
-    else if(%vehicle == "Knight's Myrmidon") 
-        return 3215;
-    else if(%vehicle == "Paladin") 
-        return 2005;
-    else if(%vehicle == "Knight's Paladin") 
-        return 2300;
-    else if(%vehicle == "Bolo") 
-        return 1470;
-    else if(%vehicle == "Recluse") 
-        return 1720;
-    else 
-        return 5000;
-}
-//=================
 
 function initScanTable() 
 {
@@ -2679,10 +2469,6 @@ function initScanTable()
     $componentST[931] = 1480; //QUICK Armor
 }
 initScanTable();
-//===================================\\
-//  || From multiplayerStdLib.cs ||  \\
-//  \/          Trimmed          \/  \\
-//===================================\\
 
 function getFullPath(%object)
 {
@@ -2700,8 +2486,308 @@ function getFullPath(%object)
         return (getFullPath(getGroup(%object)) @ "/" @ %name);
     }
 }
-// To be overwritten if the player makes one -- if not, no reason to show the admin an error (Unknown 
-function)
+
+function getVehValue(%vehicleId)
+{
+    %vehicleName = getVehicleName(%vehicleId);  
+    %vehValue = getVehValue1(%vehicleName);
+    return %vehValue;
+}
+
+function getVehValue1(%vehicle)
+{
+    if(%vehicle == "Apocalypse") 
+        return 2540;
+    else if(%vehicle == "Knight's Apocalypse") 
+        return 2670;
+    else if(%vehicle == "Basilisk") 
+        return 2000;
+    else if(%vehicle == "Knight's Basilisk") 
+        return 2325;
+    else if(%vehicle == "Emancipator") 
+        return 1730;
+    else if(%vehicle == "Gorgon") 
+        return 3350;
+    else if(%vehicle == "Knight's Gorgon") 
+        return 3805;
+    else if(%vehicle == "Minotaur") 
+        return 1300;
+    else if(%vehicle == "Knight's Minotaur") 
+        return 1650;
+    else if(%vehicle == "Olympian") 
+        return 3150;
+    else if(%vehicle == "Talon") 
+        return 1000;
+    else if(%vehicle == "Knight's Talon") 
+        return 1250;
+    else if(%vehicle == "Adjudicator") 
+        return 2705;
+    else if(%vehicle == "Platinum Guard Adjudicator") 
+        return 2995;
+    else if(%vehicle == "Executioner") 
+        return 3600;
+    else if(%vehicle == "Platinum Guard Executioner") 
+        return 4010;
+    else if(%vehicle == "Goad") 
+        return 1600;
+    else if(%vehicle == "Shepherd") 
+        return 1810;
+    else if(%vehicle == "Seeker") 
+        return 1205;
+    else if(%vehicle == "Metagen Goad") 
+        return 1600;
+    else if(%vehicle == "Metagen Seeker") 
+        return 1205;
+    else if(%vehicle == "Metagen Shepherd") 
+        return 1810;
+    else if(%vehicle == "Avenger") 
+        return 1830;
+    else if(%vehicle == "Disrupter") 
+        return 2700;
+    else if(%vehicle == "Knight's Disrupter") 
+        return 2880;
+    else if(%vehicle == "Dreadlock") 
+        return 2215;
+    else if(%vehicle == "Harabec's Predator") 
+        return 3510;
+    else if(%vehicle == "Myrmidon") 
+        return 3035;
+    else if(%vehicle == "Knight's Myrmidon") 
+        return 3215;
+    else if(%vehicle == "Paladin") 
+        return 2005;
+    else if(%vehicle == "Knight's Paladin") 
+        return 2300;
+    else if(%vehicle == "Bolo") 
+        return 1470;
+    else if(%vehicle == "Recluse") 
+        return 1720;
+    else 
+        return 5000;
+}
+
+function weapIdValue(%id) 
+{ 
+    if ( $weaponST[%id] != "" ) 
+    { 
+        return($weaponST[%id]);
+    }
+    return(0);
+}
+
+function compIdValue(%id) 
+{ 
+    if ( $componentST[%id] != "" ) 
+    { 
+        return($componentST[%id]);
+    }
+    return(0);
+}
+
+function checkValue(%vehicle)
+{
+    %totalCost = getVehValue(%vehicle);
+    // iterate through the component list
+    %componentCount = getComponentCount(%vehicle);
+    %index = 0;
+    while(%index < %componentCount) 
+    {
+        %id = getComponentId(%vehicle, %index);
+        %compValue = compIdValue(%id);
+        %totalCost = %totalCost + %compValue;
+        %index++;
+    }
+    // iterate through the weapon list
+    %weapCount = getWeaponCount(%vehicle);
+    %index = 0;
+    while(%index < %weapCount) 
+    {
+        %id = getWeaponId(%vehicle, %index);
+        %weapValue = weapIdValue(%id);
+        %totalCost = %totalCost + %weapValue;
+        %index++;
+    }
+    return(%totalCost);
+}
+
+function getVehicleCapacity(%vehicle)
+{
+    %vehicleName = getVehicleName(%vehicle);  
+    %vehCapacity = $Capacity[%vehicleName];
+    if(%vehCapacity == 0) 
+        %vehCapacity = 10;
+    return %vehCapacity;
+}
+
+function getNumberOfPlayersOnTeam(%bits)
+{
+    %name = getTeamNameFromTeamId(%bits);
+    %count = 0;
+    %playerCount = playerManager::getPlayerCount();
+    for (%p = 0; %p < %playerCount; %p++)
+    {
+        %player = playerManager::getPlayerNum(%p);
+        %team = getTeam(%player);
+        if(%team == %name)
+        {
+            %count++;
+        }      
+    }
+    return %count;
+}
+
+function getNukeStatus(%a)
+{
+    if(%a == "1" || %a == "8") 
+        return "---";
+    if(%a == "2") 
+        %team = *IDSTR_TEAM_BLUE;
+    if(%a == "4") 
+        %team = *IDSTR_TEAM_RED;
+    if ($SiloBuilt[%team] == false) 
+        return "No silo";
+    return $Nuke[%team];
+}
+
+function getPermTeamKills(%a)
+{
+    if(%a == "1" || %a == "8") 
+        return "---";
+    if(%a == "2") 
+        return $Kills[*IDSTR_TEAM_BLUE];
+    if(%a == "4") 
+        return $Kills[*IDSTR_TEAM_RED];
+}
+
+function getPermTeamDeaths(%a)
+{
+    if(%a == "1" || %a == "8") 
+        return "---";
+    if(%a == "2") 
+        return $Deaths[*IDSTR_TEAM_BLUE];
+    if(%a == "4") 
+        return $Deaths[*IDSTR_TEAM_RED];
+}
+
+function getAvailableOre(%a)
+{
+    if(%a == "1" || %a == "8") 
+        return "---";
+    if(%a == "2") 
+        return $Unallocated[*IDSTR_TEAM_BLUE];
+    if(%a == "4") 
+        return $Unallocated[*IDSTR_TEAM_RED];
+}
+
+function getPlayerOre(%player)
+{
+    %vehicle = playerManager::playerNumToVehicleId(%player);
+    if(%vehicle == "") 
+        return 0;
+    return %vehicle.oreCarried;
+}
+
+function setHarvestVariables()
+{
+
+    $Planet = "Mars"; 
+     // Choices: "Mars" "Europa" "Snow" "Moon" "Mercury" "Titan" "Venus" "Pluto" 
+     // -- ok, so not all of them are planets, but this **HAS** to match the planet of your map **OR SS WILL CRASH**
+     // If you don't know, leave it undefined and it will use trees instead of rocks.
+
+    $orePatches = 2;  //Number of ore patches (triggers with the script class 'OrePatch')
+
+    $OreZones = 1; //Number of rectangles in which ore can be spawned (x/y min/max)
+    $Xlow[1] = -690; //Range in which the ore patch can be spawned (randomly moved to) -- Start with one, go up to $OreZones
+    $Xhigh[1] = 1000; 
+    $Ylow[1] = -255;
+    $Yhigh[1] = 770;
+
+    $BlueMarkers = 1; // Number of Blue bases
+    $RedMarkers = 1; // Number of Red bases
+
+      // Need one for each base that you can build around. Start with 1, go up till the last one is the same as $(team)Markers
+    $BlueMarker[1] = getObjectId("MissionGroup\\BaseMarkers\\bluenav1"); 
+    $RedMarker[1] = getObjectId("MissionGroup\\BaseMarkers\\rednav1"); 
+
+    $BlueRadius[1] = 700; // Distance away something can be built from $BlueMarker[#]... small for a small base, 
+    $RedRadius[1] = 700;    // big for a big base. There must be one for each $TeamMarker[#].
+
+    $NewBaseRadius = 300; // Distance from base extenders that something can be built.
+
+    // Target Buildings that need to be destroyed to win
+    // Their team's can't be nutral, must match
+
+    $Targets[*IDSTR_TEAM_RED] = 5;  // Mission Objectives, building with scriptclass "target"
+    $Targets[*IDSTR_TEAM_BLUE] = 5;
+
+
+     // These need to be defined once per ore patch, incresing [number] by one,
+     // starting with 1 and going up. Last number should be the same as the number of patches.
+
+    $orePatch[1] = getObjectId("MissionGroup\\oreTriggers\\OreTrigger1");     // The trigger
+    $orePatch[1].size = 100;                    // Should correspond to the size of the trigger (un-check: "[ ] is sphere" in F2 window for best results) 
+    $orePatch[1].maxOre = 700;                 // Value of ore that can be extracted from it
+    $orePatch[1].maxRocks = 7;                 // Number of rocks to put in it
+
+
+    $orePatch[2] = getObjectId("MissionGroup\\oreTriggers\\OreTrigger2");
+    $orePatch[2].size = 100;
+    $orePatch[2].maxOre = 700;
+    $orePatch[2].maxRocks = 7;
+
+
+    // Nuke Variables (Nuke script from Sentinal M.I.B.'s DM_Nuclear_Fallout at his suggestion)
+    // More Info about variables to be added...
+
+    $SiloDTS[*IDSTR_TEAM_BLUE] = "hmoonrefinery.dts";
+    $SiloDTS[*IDSTR_TEAM_RED] = "hmoonrefinery.dts";
+
+    $Silo[*IDSTR_TEAM_BLUE] = getObjectId("Missiongroup\\BLUE\\nukeBuilder");
+    $Silo[*IDSTR_TEAM_RED] = getObjectId("Missiongroup\\RED\\nukeBuilder");
+
+    $SiloX[*IDSTR_TEAM_BLUE] = -307.7;
+    $SiloY[*IDSTR_TEAM_BLUE] = -506.2;
+    $SiloZ[*IDSTR_TEAM_BLUE] = 100;
+    $SiloZRot[*IDSTR_TEAM_BLUE] = 180;
+    $SiloXRot[*IDSTR_TEAM_BLUE] = 0;
+
+    $SiloX[*IDSTR_TEAM_RED] = -285.3;
+    $SiloY[*IDSTR_TEAM_RED] = 1029.6;
+    $SiloZ[*IDSTR_TEAM_RED] = 100;
+    $SiloZRot[*IDSTR_TEAM_RED] = 0;
+    $SiloXRot[*IDSTR_TEAM_RED] = 0;
+
+     //Shrike Missile Husks for the bombs
+    $Bomb[*IDSTR_TEAM_BLUE] = getObjectId("Missiongroup\\blueBomb");
+    $Bomb[*IDSTR_TEAM_RED] = getObjectId("Missiongroup\\redBomb");
+
+    focusServer();
+     //Waypoints (Put them where they are placed in this map in relation to the bases)
+    $Waypoints[*IDSTR_TEAM_BLUE] = getObjectId("Missiongroup/blueWaypoints");
+    $Waypoints[*IDSTR_TEAM_RED] = getObjectId("Missiongroup/redWaypoints");
+    $Waypoint[*IDSTR_TEAM_BLUE] = getObjectId("Missiongroup/blueWaypoints/Waypoint1");
+    $Waypoint[*IDSTR_TEAM_RED] = getObjectId("Missiongroup/redWaypoints/Waypoint1");
+    $Waypoint2[*IDSTR_TEAM_BLUE] = getObjectId("Missiongroup/blueWaypoints/Waypoint2");
+    $Waypoint2[*IDSTR_TEAM_RED] = getObjectId("Missiongroup/redWaypoints/Waypoint2");
+    unfocus();
+       
+     //PodExplosion Animations (Buzzbum MOD - FX Shapes)
+    $Explosion[*IDSTR_TEAM_BLUE] = getObjectId("Missiongroup\\blueExplosion");
+    $Explosion[*IDSTR_TEAM_RED] = getObjectId("Missiongroup\\redExplosion");
+       
+     //Thumper Animations (Buzzbum MOD - FX Shapes)
+    $Shockwave[*IDSTR_TEAM_BLUE] = getObjectId("Missiongroup\\blueShock");
+    $Shockwave[*IDSTR_TEAM_RED] = getObjectId("Missiongroup\\redShock");
+
+    // Starting Point for the dracos. Atop a launchpad or whatever.
+    $DracoX[*IDSTR_TEAM_BLUE] = -311.6;
+    $DracoY[*IDSTR_TEAM_BLUE] = -444.4;
+    $DracoZ[*IDSTR_TEAM_BLUE] = 125;
+    $DracoX[*IDSTR_TEAM_RED] = -282.3;
+    $DracoY[*IDSTR_TEAM_RED] = -967.2;
+    $DracoZ[*IDSTR_TEAM_RED] = 125;
+}
 
 function HarvVehicleOnDestroyed(%destroyed, %destroyer)
 { }
@@ -2726,9 +2812,3 @@ function HarvTurretOnDestroyed(%turret, %veh)
 
 function HarvVehicleOnMessage(%a, %b, %c, %d, %e, %f, %g, %h)
 { }
-// Presented by:  +-------------------------+
-//                | FLYING DUCK PRODUCTIONS |  
-//                |       <^>(o o)<^>       |
-//                |           \_/         � |
-//                +-------------------------+
-// END  

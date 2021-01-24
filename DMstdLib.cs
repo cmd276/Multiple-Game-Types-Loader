@@ -15,12 +15,12 @@
 $killPoints = 3;
 $deathPoints = 2;
 
-function CvH::setRules()
+function dm::setRules()
 {
    if($server::TeamPlay == true)
     {
-      %rules = "<tIDMULT_TDM_GAMETYPE>"   @        
-               "<tIDMULT_TDM_MAPNAME>"    @ 
+      %rules = "<tIDMULT_TDM_GAMETYPE>"   @
+               "<tIDMULT_TDM_MAPNAME>"    @
                $missionName               @
                "<tIDMULT_TDM_OBJECTIVES>" @
                "<tIDMULT_TDM_SCORING_1>"  @
@@ -42,8 +42,8 @@ function CvH::setRules()
    }
     else
     {
-      %rules = "<tIDMULT_DM_GAMETYPE>"    @        
-               "<tIDMULT_DM_MAPNAME>"     @ 
+      %rules = "<tIDMULT_DM_GAMETYPE>"    @
+               "<tIDMULT_DM_MAPNAME>"     @
                $missionName               @
                "<tIDMULT_DM_OBJECTIVES>"  @
                "<tIDMULT_DM_SCORING_1>"   @
@@ -61,30 +61,30 @@ function CvH::setRules()
                "<tIDMULT_STD_ZEN_1>"      @
                $ZenWaitTime               @
                "<tIDMULT_STD_ZEN_2>";
-                  
+
    }
-   setGameInfo(%rules); 
-   return %rules;     
+   setGameInfo(%rules);
+   return %rules;
 }
 
 // setup the rules
 // this has to be called after the definition of setRules
-                
-function CvH::player::onAdd(%this)
+
+function dm::player::onAdd(%this)
 {
    player::onAddLog(%this);
-    
+
     if($server::TeamPlay == true)
     {
-      say(%this,0, *IDMULT_TDM_WELCOME);          
+      say(%this,0, *IDMULT_TDM_WELCOME);
    }
     else
     {
       say(%this,0, *IDMULT_DM_WELCOME);
    }
-}   
+}
 
-function CvH::vehicle::onAdd(%this)
+function dm::vehicle::onAdd(%this)
 {
     if($wilzuun::Boost == true)
     {
@@ -96,9 +96,9 @@ function CvH::vehicle::onAdd(%this)
       %player = playerManager::vehicleIdToPlayerNum(%this);
       if(%player == 0)  // that's the server
          return;
-         
+
       // so it's a player
-      
+
       // shouldn't have to do this, but oh well
       setTeam(%this, *IDSTR_TEAM_RED);
    }
@@ -107,18 +107,18 @@ function CvH::vehicle::onAdd(%this)
 //--------------------------------------
 // Death Messages
 
-function CvH::vehicle::onDestroyed(%destroyed, %destroyer)
+function dm::vehicle::onDestroyed(%destroyed, %destroyer)
 {
    // left over from missionStdLib.cs
    vehicle::onDestroyedLog(%destroyed, %destroyer);
-   
+
    // this is weird but %destroyer isn't necessarily a vehicle
    %message = getFancyDeathMessage(getHUDName(%destroyed), getHUDName(%destroyer));
    if(%message != "")
    {
       say( 0, 0, %message);
    }
-   
+
    // enforce the rules
    if($server::TeamPlay == true)
    {
@@ -129,11 +129,11 @@ function CvH::vehicle::onDestroyed(%destroyed, %destroyer)
       {
          antiTeamKill(%destroyer);
       }
-   }   
+   }
 }
 
 //------------------------------------------------------------------------------
-// scoreboard 
+// scoreboard
 
 function getPlayerScore(%a)
 {
@@ -145,12 +145,12 @@ function getTeamScore(%a)
    return((getTeamKills(%a) * $killPoints) - (getTeamDeaths(%a) * $deathPoints));
 }
 
-function CvH::initScoreBoard()
+function dm::initScoreBoard()
 {
    deleteVariables("$ScoreBoard::PlayerColumn*");
    deleteVariables("$ScoreBoard::TeamColumn*");
 
-   if($server::TeamPlay == "True")    
+   if($server::TeamPlay == "True")
    {
        // Player ScoreBoard column headings
        $ScoreBoard::PlayerColumnHeader1 = *IDMULT_SCORE_TEAM;

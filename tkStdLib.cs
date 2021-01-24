@@ -1,9 +1,10 @@
 ##--------------------------- Header
-// FILE:        TagStdLib.cs
+// FILE:        tkStdLib.cs
 // AUTHORS:     ^TFW^ Wilzuun
-// LAST MOD:    11 Aug, 2020
+// LAST MOD:    29 Sep, 2020
 // VERSION:     1.0r
-// NOTES:       One shot kills. Lasers only.
+// NOTES:       Targeting Game. Target some one and die. Targeting Kills
+//              This file was created, tested, and modified in a day.
 ##--------------------------- Version History
 //  1.0r
 //      - Initial startup.
@@ -12,46 +13,58 @@
 //      - Added inMissionStart and inMissionEnd functions.
 
 ## -------------------------------------------------------------------- inMission
-function Tag::inMissionStart() 
+// This game type actually doesn't require any special activity to setup, or exit
+// from. So these are here solely for if the game type gets updated.
+function tk::inMissionStart() 
 {
     // set the allowed items.
-    Tag::setAllowedItems();
+    tk::setAllowedItems();
     // set the rules.
-    Tag::setrules();
+    tk::setrules();
     // set mission name to reflect new game type.
-    $missionName = "TAG - Dynamic Games";
+    $missionName = "TK - Dynamic Games";
     // announce new game type.
-    say(0,0,"TAG now in effect!");
+    say(0,0,"TARGETING KILLS now in effect!");
 }
+function tk::inMissionEnd() {}
 
-function tag::inMissionEnd() {}
 
 ## -------------------------------------------------------------------- Vehicle
-function Tag::vehicle::onAttacked(%destroyed, %destroyer)
+function tk::vehicle::onTargeted(%targeted, %targeter)
 {
-    %a = playerManager::vehicleIdToPlayerNum(%destroyer);
-    %b = playerManager::vehicleIdToPlayerNum(%destroyed);
-    if (%a == 0) return;
-    if (%b == 0) return;
-    if (%a == %b) return;
-    schedule("damageObject("@%destroyed@"",99999);",0.5");
+    if($gameTypes[1] == "tdm")
+    {
+        if (getTeam(%targeted) != getTeam(%targeter))
+        {
+            damageObject(%targeter, 9876543210);
+        }
+    }
+    else
+    {
+        damageObject(%targeter, 9876543210);
+    }
+}
+
+function tk::vehicle::onScan(%d, %r)
+{
+    if (getTeam(%targeted) == getTeam(%targeter))
+    {
+        healObject(%d, 9876543210);
+    }
 }
 
 ## -------------------------------------------------------------------- Server
-function Tag::setRules()
+function tk::setRules()
 {
-    %rules = "<jc><f2>Welcome to TAG!<f0>\n<b0,5:table_head8.bmp><b0,5:table_head8.bmp><jl>\n\n<y17>";
-    %rules = %rules @ "So you found yourself bored, and you got yourself a friend (I hope) and the two of you decide, the world needs a good game.\n";
-    %rules = %rules @ "So you build yourself some rules, no sensors. Only lasers will work for this project. And off we go!\n";
-    %rules = %rules @ "One shot kills! Find 'em before they find you!\n";
+    %rules = "<jc><f2>Welcome to Targeting Kills!<f0>\n<b0,5:table_head8.bmp><b0,5:table_head8.bmp><jl>\n\n<y17>";
+    %rules = %rules @ "If you target an enemy, you will die.\n";
+    %rules = %rules @ "Player with most kills, wins!\n";
 
     setGameInfo(%rules);
     return %rules;
 }
 
-//  One shot kills! Find 'em before they find you!
-
-function tag::setAllowedItems()
+function tk::setAllowedItems()
 {
     //Vehicles
     allowVehicle( all, true);   // first turn them all off

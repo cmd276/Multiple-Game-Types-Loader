@@ -1,21 +1,50 @@
+## -------------------------------------------------------------------- Header
 // CvH Standard Library - By Temujin, based on code by Gen Raven [MIB]
+## -------------------------------------------------------------------- IMPORTANT NOTES
 // Modified by ^TFW^Wilzuun for conformity into the Starsiege Script Library.
 //------------------------------------------------------------------------------
 
+## -------------------------------------------------------------------- inMission
+function cvh::inMissionStart()
+{
+    // Because this one screws with people...
+    say(0,0,"Cybrid vs Humans is starting the setup process. If you have a vehicle, you'll be switched to the proper team.");
+    // disallow tech mixing...
+    $server::AllowMixedTech = FALSE;
+    // set default items.
+    CvH::setDefaultMissionItems();
+    // cycle through each player, and treat them brand new.
+    // cycle through each player spawned on the field, and pretend they just spawned.
+    %players = playerManager::getPlayerCount();
+    for(%i = 0; %i < %players; %i++)
+    {
+        // get this players ID.
+        %player = playerManager::getPlayerNum(%i);
+        // get this players vehicle ID.
+        %vehicle = playerManager::playerNumtoVehicleId(%player);
+        // check to see if they're spawned.
+        if(%player.hasVehicle == true)
+        {
+            // lets act like they jsut spawned.
+            CvH::vehicle::onAdd(%vehicle);
+        }
+    }
+    say(0,0,"CYBRID VS HUMAN is now running.");
+}
+
+function cvh::inMissionEnd()
+{
+    // now that this game type is over, allow tech mixing again.
+    $server::AllowMixedTech = TRUE;
+}
+
+## -------------------------------------------------------------------- Player
 function CvH::player::onAdd(%this)
 {
    say(%this, 0, "Welcome to Cybrid Vs. Human Team DeathMatch!  This map is availlable on Temujin's website: www6.50megs.com/temujin.  Cybrids are red, Humans blue.  Tech mixing is NOT allowed.  This is hardcore CvH!!!");
 }
 
-//From this line to the next line is the script needed for Cybrid Vs. Human
-
-function CvH::setDefaultMissionItems()
-{
-   allowVehicle("all", true);
-   allowComponent("all", true);
-   allowWeapon("all", true);
-}
-
+## -------------------------------------------------------------------- Vehicle
 function CvH::vehicle::onAdd(%this)
 {
    // Cybrid vs Humans ... Cybrids must be blue, Humans must be red
@@ -33,9 +62,17 @@ function CvH::vehicle::onAdd(%this)
    }
 }
 
+## -------------------------------------------------------------------- Server
+function CvH::setDefaultMissionItems()
+{
+   allowVehicle("all", true);
+   allowComponent("all", true);
+   allowWeapon("all", true);
+}
+
 function CvH::setRules()
 {
-      %rules = "<F2>GAME\\\\BATTLE TYPE: \n<F0>CvH Death Match.\n\n"   @        
+    %rules = "<F2>GAME\\\\BATTLE TYPE: \n<F0>CvH Death Match.\n\n"   @
                $missionName             @
                "\n\n<F2>RULES\\\\OBJECTIVES:\n" @
                "<F0>"@
@@ -53,16 +90,10 @@ function CvH::setRules()
                $deathPoints               @
                "<tIDMULT_TDM_SCORING_5>"  @
                "<tIDMULT_TDM_SCORING_6>"  @
-               "<F2>SERVER RULES/INFORMATION:<F0>  This map was made by Temujin.  "      @ 
+               "<F2>SERVER RULES/INFORMATION:<F0>  This map was made by Temujin.  "      @
                "This and other maps, skins, and training materials can be downloaded from Tem's website:\n" @
             "   http://www6.50megs.com/temujin (yes, that really is www6!)\n\n";
 
-   setGameInfo(%rules);      
+    setGameInfo(%rules);
+    return %rules;
 }
-
-// setup the rules - this has to be called after the definition of setRules
-
-$server::AllowMixedTech =                            FALSE;
-
-
-
